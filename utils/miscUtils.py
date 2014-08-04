@@ -5,7 +5,7 @@ Tomás Larrain A.
 4 de agosto de 2014
 """
 import os
-
+import numpy as np
 
 def getFacePath():
 	return '/Users/Tomas/Developer/data/faces/'
@@ -30,6 +30,9 @@ def getDataBasePath(dataBase):
 	else:
 		return "No data base with " + str(dataBase) + " name in the face path"
 
+def getPersonIDs(rootPath):
+
+	return np.array([d for d in os.listdir(rootPath) if os.path.isdir(os.path.join(rootPath, d))])
 
 def photosPerPerson(rootPath):
 	# cantidad minima de fotos existentes en una clase (para que todo esten iguales)
@@ -52,6 +55,7 @@ def randomSelection(rootPath,cantFotos,cantPersonas):
 	idxPerson = idxPerson[auxIdx]
 	sujetos = len(idxPerson)
 	idxFoto = np.random.permutation(cantFotos)
+	return idxFoto, idxPerson
 
 
 def drawPatch(I,corner,a,b):

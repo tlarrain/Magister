@@ -10,7 +10,6 @@ import utils.ASRUtils as asr
 import utils.miscUtils as miscUtils
 import os
 import time
-import cv2
 
 # Parametros
 m = 600			# Cantidad de patches seleccionados por foto para A
@@ -23,61 +22,61 @@ alpha = 0.5 	# Peso del centro
 Q = 5			# Cluster Padres
 R = 5 			# Cluser Hijos
 sub = 1			# Subsample
-sparseThreshold = 0 # Umbral para binarizar la representación sparse
-cantPersonas = 20 # Cantidad de personas para el experimento
 
 # Inicializacion Variables
 cantIteraciones = 100
 porcAcumulado = 0
 testTimeAcumulado = 0
 trainTimeAcumulado = 0
-
+cantPersonas = 20
 
 # Datos de entrada del dataset
-dataBase = "ORL"
+dataBase = "AR"
 rootPath = miscUtils.getDataBasePath(dataBase)
-cantPhotos = miscUtils.photosPerPerson(rootPath)
-cantPhotosDict = 2
-cantPhotosSparse = cantPhotos-cantPhotosDict-1
+cantFotos = 26
+cantFotosA = 10
+cantFotosSparse = cantFotos-cantFotosA-1
 
 U = asr.LUT(height,width,a,b) # Look Up Table
-ii,jj = asr.grilla(height,width,a,b,m) # Generacion de esquinas superiores izquierdas aleatorias (i,j)
+
 
 for it in range(cantIteraciones):
-	
+# Look Up Table
 	print "Iteracion ", it+1, " de ", cantIteraciones
 	print "Entrenando..."
-	
-	beginTime = time.time()
 
+	beginTime = time.time()
 	# Entrenamiento: Diccionario A y Parches Sparse
 	YC = np.array([])
 	YP = np.array([])
 
 	# Seleccion aleatoria de individuos
-	idxPhoto, idxPerson = miscUtils.randomSelection(rootPath, cantPhotos, cantPersonas)
-	
+	idxPerson = np.array([d for d in os.listdir(rootPath) if os.path.isdir(os.path.join(rootPath, d))])
+	auxIdx = np.random.permutation(len(idxPerson))[:cantPersonas]
+	idxPerson = idxPerson[auxIdx]
+	sujetos = len(idxPerson)
+	idxFoto = np.random.permutation(cantFotos)
 
-	for i in range(cantPersonas):
-		
+	for i in range(sujetos):
 		route = os.path.join(rootPath,idxPerson[i])
-		photos = os.listdir(route)
+		fotos = os.listdir(route)
+		# fotos = np.random.permutation(fotos)
 		Y = np.array([])
-		
-		for j in range(cantPhotosDict):
-			
-			
-			routePhoto = os.path.join(route,photos[idxPhoto[j]])
-			I = asr.readScaleImage(routePhoto,width,height)
-
+		for j in range(cantFotosA):
+			routeFoto = os.path.join(route,fotos[idxFoto[j]])
+			I = asr.readScaleImage(routeFoto,width,height)
+			# Generacion de esquinas superiores izquierdas aleatorias (i,j)
+			ii,jj = asr.grilla(I,m,a,b)
 			Yaux = asr.patches(I,ii,jj,U,a,b,alpha,sub)
-		
+
+
+
 			if len(Y) == 0:
 				Y = Yaux.copy()
 			else:
 				Y = np.vstack((Y,Yaux))
-				
-		
+
+		Y = np.float32(Y)
 		YCaux,YPaux = asr.modelling(Y,Q,R) # Clusteriza la matriz Y en padres e hijos
 
 		if len(YC) == 0:
@@ -86,91 +85,81 @@ for it in range(cantIteraciones):
 		else:
 			YC = np.vstack((YC,YCaux))
 			YP = np.vstack((YP,YPaux))
-		
+
 
 	Y = np.array([])
 	Ysparse = np.array([])
-
-	ii,jj = asr.grilla(height,width,a,b,m2)
-
-	for i in range(cantPersonas):
+	for i in range(sujetos):
 		route = os.path.join(rootPath,idxPerson[i])
-		photos = os.listdir(route)
-		
-		for j in range(cantPhotosSparse):
-			idx = j+cantPhotosDict
-			routePhoto = os.path.join(route,photos[idxPhoto[idx]])
+		fotos = os.listdir(route)
+		for j in range(cantFotosSparse):
 
-			I = asr.readScaleImage(routePhoto,width,height)
+			idx = j+cantFotosA
+			routeFoto = os.path.join(route,fotos[idxFoto[idx]])
+			I = asr.readScaleImage(routeFoto,width,height)
+
 			# Generacion de esquinas superiores izquierdas aleatorias (i,j)
+			ii,jj = asr.grilla(I,m2,a,b)
+
+			#ii = np.random.random_integers(0,height-a,size=m2)
+			#jj = np.random.random_integers(0,width-b,size=m2)
 			Y = asr.patches(I,ii,jj,U,a,b,alpha,sub)
 			alpha1 = asr.normL1_omp(Y,YC,R)
-			
+			# alpha1 = asr.normL1_lasso(Y,YC,R)
 			if len(Ysparse) == 0:
 				Ysparse = alpha1.copy()
 			else:
 				Ysparse = np.hstack((Ysparse,alpha1))
-				
+
 
 	Ysparse = Ysparse.transpose()
-	YsparseBinary = (Ysparse < -sparseThreshold) | (Ysparse > sparseThreshold)
-	# YsparseBinary = Ysparse != 0
-	
+	Ysparse = Ysparse != 0
 
 	trainTime = time.time() - beginTime
 	trainTimeAcumulado += trainTime
 	aciertos = 0
 	responses = np.zeros(0)
+	for i in range(sujetos):
+		responses = np.append(responses,float(idxPerson[i])*np.ones(cantFotosSparse))
 
-	for i in range(cantPersonas):
-		responses = np.append(responses,float(idxPerson[i])*np.ones(cantPhotosSparse))
-
-	
 
 	print "Testing..."
 	beginTime = time.time()
-	for i in range(cantPersonas):
-		
+	for i in range(sujetos):
+
 		route = os.path.join(rootPath,idxPerson[i])
-		photos = os.listdir(route)
-		routePhoto = os.path.join(route,photos[idxPhoto[cantPhotos-1]])
-		
-		I = asr.readScaleImage(routePhoto,width,height)
+		fotos = os.listdir(route)
+		routeFoto = os.path.join(route,fotos[idxFoto[cantFotos-1]])
+
+		I = asr.readScaleImage(routeFoto,width,height)
+
+		ii, jj = asr.grilla(I,m2,a,b)
 		Y = asr.patches(I,ii,jj,U,a,b,alpha,sub)
 
 		alpha1 = asr.normL1_omp(Y,YC,R)
 		# alpha1 = asr.normL1_lasso(Y,YC,R)
-		
 		resto = float('inf')
-		restoAux = float('inf')
-		correcto = cantPersonas+1
-		alpha1 = alpha1.transpose()
-		# alphaBinary = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold)
+		correcto = sujetos+1
 		alphaBinary = alpha1 != 0
-		
-		for j in range(cantPersonas*cantPhotosSparse):
-			
-			Yclass = YsparseBinary[j*m2:(j+1)*m2,:]
+		alphaBinary = alphaBinary.transpose()
+		for j in range(sujetos*cantFotosSparse):
+			Yclass = Ysparse[j*m2:(j+1)*m2,:]
 			resta = np.abs(Yclass-alphaBinary)
 			restoAux = np.sum(resta)
-
 			if restoAux < resto:
 				correcto = responses[j]
 				resto = restoAux
 
 		if int(correcto) == int(idxPerson[i]):
 			aciertos += 1
-	
+
 	testTime = time.time() - beginTime
-	testTimeAcumulado += testTime/cantPersonas	
-	print "Porcentaje Aciertos: " , float(aciertos)/cantPersonas*100,	"%\n"	
-	porcAcumulado += float(aciertos)/cantPersonas*100
+	testTimeAcumulado += testTime/sujetos	
+	print "Porcentaje Aciertos: " , float(aciertos)/sujetos*100,	"%\n"	
+	porcAcumulado += float(aciertos)/sujetos*100
 
 
 print "Experimento finalizado"
 print "Tiempo de entrenamiento promedio: ", trainTimeAcumulado/cantIteraciones, " segundos"
 print "Tiempo de testing promedio: ", testTimeAcumulado/cantIteraciones, " segundos/persona"
 print "Porcentaje acumulado: ", porcAcumulado/cantIteraciones, "%"
-
-
-
