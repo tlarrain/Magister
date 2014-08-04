@@ -68,10 +68,9 @@ def patches(I,ii,jj,U,a,b,alpha,sub):
 	Y = uninorm(Yaux)
 	return Y
 
-def grilla(I,m,a,b):
+def grilla(h,w,a,b,m):
 	# Genera indices para extraer parches en forma de grilla (distribucion uniforme)
-	h = I.shape[0]
-	w = I.shape[1]
+
 	ii = np.zeros(m)
 	jj = np.zeros(m)
 	divisor = int(np.floor(m ** (0.5)))
@@ -87,17 +86,6 @@ def grilla(I,m,a,b):
 			break
 	return ii,jj		
 
-
-def cantidadFotos(rootPath):
-	# cantidad minima de fotos existentes en una clase (para que todo esten iguales)
-	idx_person = os.listdir(rootPath)
-	cant_fotos = float('inf')
-	for d in range(len(idx_person)):
-		root = os.path.join(rootPath,idx_person[d])
-		files = os.listdir(root)
-		if len(files)<cant_fotos:
-			cant_fotos = len(files)
-	return cant_fotos	
 
 def adaptiveDictionary_v3(Y,YC,Q,R,theta):
 	sujetos = YC.shape[0]/(Q*R)
@@ -129,6 +117,7 @@ def adaptiveDictionary_v3(Y,YC,Q,R,theta):
 	seleccion = np.array(seleccion)
 	return LimMat, seleccion
 
+
 def adaptiveDictionary_v2(patch,YC,Q,R,theta):
 	# Encuentra el diccionario adaptivo basado en theta 
 	sujetos = YC.shape[0]/(Q*R)
@@ -153,12 +142,6 @@ def adaptiveDictionary_v2(patch,YC,Q,R,theta):
 	return A,seleccion, fil_sel			
 
 
-def drawPatch(I,corner,a,b):
-	# Dibuja un patch de tamanio (a,b) desde la esquina corner en la imagen I.
-	x = int(corner[1])
-	y = int(corner[0])
-	cv2.rectangle(I,(x,y),(x+a,y+b),(255,0,0))
-	return I
 
 def clasification(A,y,alpha1,R,sujetos):
 	# retorna el indice de la clasificacion de un patch, y su norma L1 maxima (para calculos de SCI)
@@ -232,58 +215,13 @@ def sortAndSelect(registro,tau,s,sujetos,display=False):
 	if display:
 		print sort_final	
 	return seleccionFinal
-
-def listaSujetos(testPath):
-	ciTotal = np.zeros(0)
-
-	with open(testPath) as f:
-		data = f.readlines()
-
-	contData = 1
-	auxID_ant = 1
-	while True:
-
-		while True:
-
-			if contData > len(data):
-				break
-
-			line = data[contData].split(' ')
-			contData += 1
-			ci = line[0]
-			auxID = int(line[2])
-
-			# Se comprueba que la foto sea de testing
-			if auxID_ant-auxID == -1:
-				auxID_ant = auxID
-				break
-
-			if auxID == 1:
-				auxID_ant = auxID
-				continue
-
-			if auxID_ant-auxID == 1:
-				auxID_ant = auxID
-
-			ciTotal = np.append(ciTotal,int(ci))
-			
-
-			contData += 1
-
-		if contData > len(data):
-			break
-
-	ciUnique, idx = np.unique(ciTotal,return_index = True)		
-	idx = np.sort(idx)
-	ciTotal = ciTotal[idx]
 	
-	return ciTotal		
-
 
 def modelling(Y,Q,R):
 
 	YP = np.zeros(0)
 	YC = np.zeros(0)
+	Y = np.float32(Y)
 	
 	criteria = (cv2.TERM_CRITERIA_MAX_ITER,1000, 1e-3)
 	ret,labels,centers = cv2.kmeans(Y,Q,criteria,1,cv2.KMEANS_RANDOM_CENTERS)
@@ -315,46 +253,6 @@ def getPhotoIdx(photoName,photoList):
 		if j[0] == photoName:
 			return i
 
-def readPhotoInfo(photoInfoPath):
-	photoList = []
-	cont = 0
-	with open(photoInfoPath) as csvfile:
-		photoInfo = csv.reader(csvfile, delimiter='\t', quotechar='|')
-		for row in photoInfo:
-			if cont < 8:
-				cont += 1
-				continue
-			photoList.append(row[-1:])
-
-	return photoList
-
-def getPeopleList(peopleInfoPath):
-	peopleList = []
-	cont = 0
-	with open(peopleInfoPath) as csvfile:
-		people = csv.reader(csvfile, delimiter='\t', quotechar='|')
-		for row in people:
-			if cont < 8:
-				cont += 1
-				continue
-			peopleList.append(row[1])
-
-	peopleList = np.array(peopleList).astype(int)
-	return peopleList
-
-def getBest16List(best16Path):
-	best16List = []
-	cont = 0
-	with open(best16Path) as csvfile:
-		best16 = csv.reader(csvfile, delimiter='\t', quotechar='|')
-		for row in best16:
-			if cont < 4:
-				cont += 1
-				continue
-			best16List.append(row[2:])
-
-	best16List = np.array(best16List).astype(int)
-	return best16List
 
 def zeroFill(array,outputLength):
 	length = len(array)

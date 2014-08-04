@@ -22,6 +22,7 @@ alpha = 0.5 	# Peso del centro
 Q = 5			# Cluster Padres
 R = 5 			# Cluser Hijos
 sub = 1			# Subsample
+sparseThreshold = 0
 
 # Inicializacion Variables
 cantIteraciones = 100
@@ -33,11 +34,12 @@ trainTimeAcumulado = 0
 # Datos de entrada del dataset
 dataBase = "AR"
 rootPath = miscUtils.getDataBasePath(dataBase)
-cantFotos = 26
-cantFotosA = 10
-cantFotosSparse = cantFotos-cantFotosA-1
+cantPhotos = miscUtils.photosPerPerson(rootPath)
+cantPhotosDict = 10
+cantPhotosSparse = cantPhotos-cantPhotosDict-1
 
 U = asr.LUT(height,width,a,b) # Look Up Table
+ii,jj = asr.grilla(h,w,a,b,m) # Generacion de esquinas superiores izquierdas aleatorias (i,j)
 
 
 for it in range(cantIteraciones):
@@ -46,37 +48,32 @@ for it in range(cantIteraciones):
 	print "Entrenando..."
 	
 	beginTime = time.time()
+
 	# Entrenamiento: Diccionario A y Parches Sparse
 	YC = np.array([])
 	YP = np.array([])
 
 	# Seleccion aleatoria de individuos
-	idxPerson = np.array([d for d in os.listdir(rootPath) if os.path.isdir(os.path.join(rootPath, d))])
-	auxIdx = np.random.permutation(len(idxPerson))[:cantPersonas]
-	idxPerson = idxPerson[auxIdx]
-	sujetos = len(idxPerson)
-	idxFoto = np.random.permutation(cantFotos)
+	idxFoto = miscUtils.randomSelection(rootPath, cantPhotos, cantPersonas)
 	
 	for i in range(sujetos):
 		route = os.path.join(rootPath,idxPerson[i])
-		fotos = os.listdir(route)
-		# fotos = np.random.permutation(fotos)
+		photos = os.listdir(route)
 		Y = np.array([])
-		for j in range(cantFotosA):
-			routeFoto = os.path.join(route,fotos[idxFoto[j]])
-			I = asr.readScaleImage(routeFoto,width,height)
-			# Generacion de esquinas superiores izquierdas aleatorias (i,j)
-			ii,jj = asr.grilla(I,m,a,b)
+		
+		for j in range(cantPhotosDict):
+			
+			routePhoto = os.path.join(route,photos[idxPhoto[j]])
+			I = asr.readScaleImage(routePhoto,width,height)
+
 			Yaux = asr.patches(I,ii,jj,U,a,b,alpha,sub)
 			
-			
-
 			if len(Y) == 0:
 				Y = Yaux.copy()
 			else:
 				Y = np.vstack((Y,Yaux))
 				
-		Y = np.float32(Y)
+		
 		YCaux,YPaux = asr.modelling(Y,Q,R) # Clusteriza la matriz Y en padres e hijos
 
 		if len(YC) == 0:
@@ -89,23 +86,21 @@ for it in range(cantIteraciones):
 
 	Y = np.array([])
 	Ysparse = np.array([])
+
 	for i in range(sujetos):
 		route = os.path.join(rootPath,idxPerson[i])
 		fotos = os.listdir(route)
-		for j in range(cantFotosSparse):
-			
-			idx = j+cantFotosA
+		
+		for j in range(cantPhotosSparse):
+			idx = j+cantFotosDict
 			routeFoto = os.path.join(route,fotos[idxFoto[idx]])
-			I = asr.readScaleImage(routeFoto,width,height)
+			I = asr.readScaleImage(routePhoto,width,height)
 			
 			# Generacion de esquinas superiores izquierdas aleatorias (i,j)
 			ii,jj = asr.grilla(I,m2,a,b)
-			
-			#ii = np.random.random_integers(0,height-a,size=m2)
-			#jj = np.random.random_integers(0,width-b,size=m2)
 			Y = asr.patches(I,ii,jj,U,a,b,alpha,sub)
 			alpha1 = asr.normL1_omp(Y,YC,R)
-			# alpha1 = asr.normL1_lasso(Y,YC,R)
+			
 			if len(Ysparse) == 0:
 				Ysparse = alpha1.copy()
 			else:
@@ -113,14 +108,13 @@ for it in range(cantIteraciones):
 				
 
 	Ysparse = Ysparse.transpose()
-	Ysparse = Ysparse != 0
-
+	Ysparse = (Ysparse < -sparseThreshold) | (Ysparse > sparseThreshold)
 	trainTime = time.time() - beginTime
 	trainTimeAcumulado += trainTime
 	aciertos = 0
 	responses = np.zeros(0)
 	for i in range(sujetos):
-		responses = np.append(responses,float(idxPerson[i])*np.ones(cantFotosSparse))
+		responses = np.append(responses,float(idxPerson[i])*np.ones(cantPhotosSparse))
 
 	
 	print "Testing..."
@@ -128,12 +122,10 @@ for it in range(cantIteraciones):
 	for i in range(sujetos):
 		
 		route = os.path.join(rootPath,idxPerson[i])
-		fotos = os.listdir(route)
-		routeFoto = os.path.join(route,fotos[idxFoto[cantFotos-1]])
+		photos = os.listdir(route)
+		routePhoto = os.path.join(route,Photos[idxPhoto[cantPhotos-1]])
 		
-		I = asr.readScaleImage(routeFoto,width,height)
-		
-		ii, jj = asr.grilla(I,m2,a,b)
+		I = asr.readScaleImage(routePhoto,width,height)
 		Y = asr.patches(I,ii,jj,U,a,b,alpha,sub)
 
 		alpha1 = asr.normL1_omp(Y,YC,R)
@@ -142,7 +134,7 @@ for it in range(cantIteraciones):
 		correcto = sujetos+1
 		alphaBinary = alpha1 != 0
 		alphaBinary = alphaBinary.transpose()
-		for j in range(sujetos*cantFotosSparse):
+		for j in range(sujetos*cantPhotosSparse):
 			Yclass = Ysparse[j*m2:(j+1)*m2,:]
 			resta = np.abs(Yclass-alphaBinary)
 			restoAux = np.sum(resta)
