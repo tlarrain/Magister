@@ -22,12 +22,12 @@ b = 18				# Ancho del patch
 alpha = 0.5 		# Peso del centro
 Q = 5				# Cluster Padres
 R = 5 				# Cluser Hijos
-sub = 1				# Subsample
+sub = 2				# Subsample
 sparseThreshold = 0 # Umbral para binarizar la representación sparse
 cantPersonas = 20 	# Cantidad de personas para el experimento
 
 
-# Inicializacion Variables
+# Inicializacion variables control
 cantIteraciones = 100
 porcAcumulado = 0
 testTimeAcumulado = 0
@@ -39,10 +39,15 @@ dataBase = "ORL"
 rootPath = miscUtils.getDataBasePath(dataBase)
 cantPhotos = miscUtils.photosPerPerson(rootPath)
 cantPhotosDict = 2
+
+if cantPhotosDict >= cantPhotos-1: # Error en la cantidad de fotos elegidas para el diccionario
+	print "ERROR: cantidad de fotos para el diccionario debe ser a lo más cantPhotos-2"
+	exit()
+
 cantPhotosSparse = cantPhotos-cantPhotosDict-1
 
 U = asr.LUT(height,width,a,b) # Look Up Table
-ii,jj = asr.grilla(height,width,a,b,m) # Generacion de esquinas superiores izquierdas aleatorias (i,j)
+ii,jj = asr.grilla(height,width,a,b,m) # generacion de esquinas superiores izquierdas aleatorias (i,j)
 
 for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	
