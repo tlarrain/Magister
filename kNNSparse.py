@@ -22,7 +22,7 @@ b = 18				# Ancho del patch
 alpha = 0.5 		# Peso del centro
 Q = 5				# Cluster Padres
 R = 5 				# Cluser Hijos
-sub = 2				# Subsample
+sub = 1				# Subsample
 sparseThreshold = 0 # Umbral para binarizar la representación sparse
 cantPersonas = 20 	# Cantidad de personas para el experimento
 
@@ -37,13 +37,9 @@ trainTimeAcumulado = 0
 # Datos de entrada del dataset
 dataBase = "ORL"
 rootPath = miscUtils.getDataBasePath(dataBase)
+
 cantPhotos = miscUtils.photosPerPerson(rootPath)
-cantPhotosDict = 2
-
-if cantPhotosDict >= cantPhotos-1: # Error en la cantidad de fotos elegidas para el diccionario
-	print "ERROR: cantidad de fotos para el diccionario debe ser a lo más cantPhotos-2"
-	exit()
-
+cantPhotosDict = 1
 cantPhotosSparse = cantPhotos-cantPhotosDict-1
 
 U = asr.LUT(height,width,a,b) # Look Up Table
@@ -190,9 +186,11 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 
 # RESULTADOS FINALES
 print "Experimento finalizado"
-print "Tiempo de entrenamiento promedio: ", trainTimeAcumulado/cantIteraciones, " segundos"
+print "Tiempo de entrenamiento promedio: ", trainTimeAcumulado/cantIteraciones, " segundos/persona"
 print "Tiempo de testing promedio: ", testTimeAcumulado/cantIteraciones, " segundos/persona"
-print "Porcentaje acumulado: ", porcAcumulado/cantIteraciones, "%"
+print "Porcentaje acumulado: ", porcAcumulado/cantIteraciones, "%\n"
+
+print "Tiempo total del test: ", (testTimeAcumulado + trainTimeAcumulado)/60, " minutos"
 
 
 
