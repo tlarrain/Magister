@@ -1,21 +1,16 @@
+# -*- coding: utf-8 -*-
+"""
+Librería para algoritmo ASR y derivados
+Tomás Larrain A.
+"""
+
 import cv2
 import numpy as np
-from numpy import random
-import os
 import spams
-import time
-from scipy import signal,io
-import csv
+from scipy import signal
 
 
-def wiener(I):
-	uni = I/255.0
-	W = signal.wiener(uni, mysize=(3,3))
-	W = np.round(255*W)
-	W = np.uint8(W)
-	return W
-
-def LUT(h,w,a,b):
+def LUT(h, w, a, b):
 	# Genera una Look Up Table para extraer parches de axb de una imagen de hxw
 	U = np.zeros(((h-a+1)*(w-b+1),a*b))
 	I =np.zeros((h,w))
@@ -32,21 +27,13 @@ def LUT(h,w,a,b):
 			count+=1	
 	return U			
 
+
 def uninorm(Y):
 	# Normaliza las filas de Y
 	for i in range(Y.shape[0]):
 		Y[i,:] = cv2.normalize(Y[i,:]).flatten()	
 	return Y
 
-def readScaleImage(route,width,height):
-	It = cv2.imread(route)
-	if It is not None:	 
-		It = cv2.cvtColor(It,cv2.COLOR_BGR2GRAY)
-		It = np.float32(It)
-		It = cv2.resize(It,(width,height))	
-		return It
-	else:
-		return np.zeros(0)
 
 def patches(I,ii,jj,U,a,b,alpha,sub):
 	# Extrae todos los patches cuya esquina superior izquierda es (ii,jj)
@@ -68,6 +55,7 @@ def patches(I,ii,jj,U,a,b,alpha,sub):
 	Y = uninorm(Yaux)
 	return Y
 
+
 def grilla(h,w,a,b,m):
 	# Genera indices para extraer parches en forma de grilla (distribucion uniforme)
 
@@ -88,15 +76,15 @@ def grilla(h,w,a,b,m):
 
 
 def adaptiveDictionary_v3(Y,YC,Q,R,theta):
-	sujetos = YC.shape[0]/(Q*R)
+	cantPersonas = YC.shape[0]/(Q*R)
 	m = Y.shape[0]
-	seleccion = np.zeros((sujetos,m))
-	LimMat = np.zeros((R*sujetos,m))
+	seleccion = np.zeros((cantPersonas,m))
+	LimMat = np.zeros((R*cantPersonas,m))
 	
 
 	cos = np.dot(YC,Y.transpose())
 
-	for d in range(sujetos):
+	for d in range(cantPersonas):
 		cos1 = cos[d*Q*R:(d+1)*Q*R,:]
 		minimo = 1-np.amax(cos1,axis=0)
 
@@ -120,12 +108,12 @@ def adaptiveDictionary_v3(Y,YC,Q,R,theta):
 
 def adaptiveDictionary_v2(patch,YC,Q,R,theta):
 	# Encuentra el diccionario adaptivo basado en theta 
-	sujetos = YC.shape[0]/(Q*R)
+	cantPersonas = YC.shape[0]/(Q*R)
 	fil_sel = np.zeros(0)
 	idx_centro = []
 	seleccion = []
 	cos = np.dot(YC,patch)	
-	for d in range(sujetos):
+	for d in range(cantPersonas):
 		cos1 = cos[d*Q*R:(d+1)*Q*R]
 		minimo = 1-max(cos1)
 
@@ -143,11 +131,11 @@ def adaptiveDictionary_v2(patch,YC,Q,R,theta):
 
 
 
-def clasification(A,y,alpha1,R,sujetos):
+def clasification(A,y,alpha1,R,cantPersonas):
 	# retorna el indice de la clasificacion de un patch, y su norma L1 maxima (para calculos de SCI)
 	norm1 = -1000000
 	err_min = 1000000
-	kmin = sujetos+1
+	kmin = cantPersonas+1
 	for k in range(len(alpha1)/R):
 		alpha1 = alpha1.flatten()
 		delta = alpha1[R*k:R*(k+1)]
@@ -193,17 +181,8 @@ def normL1_omp(x,A,R):
 	return alpha
 
 
-def seleccionar(fila,Q,R,sujetos):
-	# Encuentra los sujetos seleccionados en el codigo de Matlab, basado en los centroides que se eligen
-	seleccion = []
-	cont = 0
-	for i in range(0,Q*R,R):	
-		seleccion.append(fila[i]/(Q*R))
-	
-	return np.array(seleccion)
-
-def sortAndSelect(registro,tau,s,sujetos,display=False):
-	seleccionFinal = np.zeros(sujetos)
+def sortAndSelect(registro,tau,s,cantPersonas,display=False):
+	seleccionFinal = np.zeros(cantPersonas)
 	idx_sort = np.argsort(registro[1,:])
 	sort = registro[:,idx_sort]
 	idx = np.nonzero(sort[1,:]>=tau)[0]
@@ -262,6 +241,7 @@ def zeroFill(array,outputLength):
 	else:
 		print "Output length smaller than original array"
 		return array	
+
 
 def returnUnique(array):
 	arrayUnique, idx = np.unique(array,return_index = True)		
