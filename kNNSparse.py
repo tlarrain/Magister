@@ -12,13 +12,16 @@ import os
 import time
 import cv2
 
+
+
+
 # Parámetros
-m = 600				# Cantidad de patches seleccionados por foto para A
-m2 = 150 			# Cantidad de patches para Matriz S
+m = 625				# Cantidad de patches seleccionados por foto para A
+m2 = 144 			# Cantidad de patches para Matriz S
 height = 100		# Alto del resize de la imagen
 width = 100			# Ancho del resize de la imagen
-a = 18				# Alto del patch
-b = 18				# Ancho del patch
+a = 25				# Alto del patch
+b = 25				# Ancho del patch
 alpha = 0.5 		# Peso del centro
 Q = 5				# Cluster Padres
 R = 5 				# Cluser Hijos
@@ -43,7 +46,7 @@ cantPhotosDict = 1
 cantPhotosSparse = cantPhotos-cantPhotosDict-1
 
 U = asr.LUT(height,width,a,b) # Look Up Table
-ii,jj = asr.grilla(height,width,a,b,m) # generacion de esquinas superiores izquierdas aleatorias (i,j)
+ii,jj = asr.grilla_v2(height, width, a, b, m) # generacion de esquinas superiores izquierdas aleatorias (i,j)
 
 for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	
@@ -93,7 +96,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	Ysparse = np.array([])
 
 	# Grilla de m2 cantidad de parches
-	ii,jj = asr.grilla(height, width, a, b, m2)
+	ii,jj = asr.grilla_v2(height, width, a, b, m2)
 
 
 
@@ -186,11 +189,36 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 
 # RESULTADOS FINALES
 print "Experimento finalizado"
+print "Cantidad de personas: ", cantPersonas
+print "Fotos para diccionario: ", cantPhotosDict
+print "Fotos para base de datos: ", cantPhotosSparse , "\n"
+
+title = "Variables utilizadas:"
+print title
+print miscUtils.fixedLengthString(title, "m: " + str(m))
+print miscUtils.fixedLengthString(title, "m2: " + str(m2))
+print miscUtils.fixedLengthString(title, "height: " + str(height))
+print miscUtils.fixedLengthString(title, "width: " +str(width))
+print miscUtils.fixedLengthString(title, "a: " + str(a))
+print miscUtils.fixedLengthString(title, "b: " + str(b))
+print miscUtils.fixedLengthString(title, "alpha: " + str(alpha))
+print miscUtils.fixedLengthString(title, "Q: " + str(Q))
+print miscUtils.fixedLengthString(title, "R: " + str(R))
+print miscUtils.fixedLengthString(title, "sub: " + str(sub))
+print miscUtils.fixedLengthString(title, "sparseThreshold: " + str(sparseThreshold)) + "\n"
+
 print "Tiempo de entrenamiento promedio: ", trainTimeAcumulado/cantIteraciones, " segundos/persona"
 print "Tiempo de testing promedio: ", testTimeAcumulado/cantIteraciones, " segundos/persona"
 print "Porcentaje acumulado: ", porcAcumulado/cantIteraciones, "%\n"
 
 print "Tiempo total del test: ", (testTimeAcumulado + trainTimeAcumulado)/60, " minutos"
+
+
+
+
+
+
+
 
 
 

@@ -35,7 +35,7 @@ def uninorm(Y):
 	return Y
 
 
-def patches(I,ii,jj,U,a,b,alpha,sub):
+def patches(I, ii, jj, U, a, b, alpha, sub):
 	# Extrae todos los patches cuya esquina superior izquierda es (ii,jj)
 	ii = ii.astype(int)
 	jj = jj.astype(int)
@@ -53,18 +53,22 @@ def patches(I,ii,jj,U,a,b,alpha,sub):
 	ixo = (ixo +np.array([a/2,b/2]))*alpha
 	Yaux = np.hstack((Yaux,ixo))
 	Y = uninorm(Yaux)
+	# Y = Yaux.copy()
 	return Y
 
 
-def grilla(h,w,a,b,m):
+def grilla(h, w, a, b, m):
 	# Genera indices para extraer parches en forma de grilla (distribucion uniforme)
 
 	ii = np.zeros(m)
 	jj = np.zeros(m)
 	divisor = int(np.floor(m ** (0.5)))
 	auxIdx = 0
-	for i in range(0,h-a,(h-a)/divisor):
-		for j in range(0,w-b,(w-b)/divisor):
+	pasoI = max(1,(h-a)/divisor)
+	pasoJ = max(1,(w-b)/divisor)
+	print pasoI, pasoJ
+	for i in range(0,h-a+1,pasoI):
+		for j in range(0,w-b+1,pasoJ):
 			ii[auxIdx] = i
 			jj[auxIdx] = j
 			auxIdx += 1
@@ -74,8 +78,27 @@ def grilla(h,w,a,b,m):
 			break
 	return ii,jj		
 
+def grilla_v2(h, w, a, b, m):
+	# Pensada para usar m como cuadrado perfecto (tiene sentido si las fotos que se usan son cuadradas)
 
-def adaptiveDictionary_v3(Y,YC,Q,R,theta):
+	ii = np.zeros(m)
+	jj = np.zeros(m)
+	cantidadPorEje = int(np.floor(m ** (0.5)))
+	
+	ejeI = np.floor(np.linspace(0,h-a,cantidadPorEje))
+	ejeJ = np.floor(np.linspace(0,w-b,cantidadPorEje))
+	auxIdx = 0
+	
+	for i in ejeI:
+		for j in ejeJ:
+			ii[auxIdx] = i
+			jj[auxIdx] = j
+			auxIdx += 1
+			
+	return ii,jj	
+
+
+def adaptiveDictionary_v3(Y, YC, Q, R, theta):
 	cantPersonas = YC.shape[0]/(Q*R)
 	m = Y.shape[0]
 	seleccion = np.zeros((cantPersonas,m))
@@ -106,7 +129,7 @@ def adaptiveDictionary_v3(Y,YC,Q,R,theta):
 	return LimMat, seleccion
 
 
-def adaptiveDictionary_v2(patch,YC,Q,R,theta):
+def adaptiveDictionary_v2(patch, YC, Q, R, theta):
 	# Encuentra el diccionario adaptivo basado en theta 
 	cantPersonas = YC.shape[0]/(Q*R)
 	fil_sel = np.zeros(0)
@@ -131,7 +154,7 @@ def adaptiveDictionary_v2(patch,YC,Q,R,theta):
 
 
 
-def clasification(A,y,alpha1,R,cantPersonas):
+def clasification(A, y, alpha1, R, cantPersonas):
 	# retorna el indice de la clasificacion de un patch, y su norma L1 maxima (para calculos de SCI)
 	norm1 = -1000000
 	err_min = 1000000
@@ -150,7 +173,7 @@ def clasification(A,y,alpha1,R,cantPersonas):
 			kmin = k
 	return kmin, norm1
 
-def normL1_lasso(x,A,R):
+def normL1_lasso(x, A, R):
 	# minimizacion L1
 	X = np.asfortranarray(np.matrix(x).transpose())
 	D = np.asfortranarray(A.transpose())
@@ -167,7 +190,7 @@ def normL1_lasso(x,A,R):
 	alpha = np.array(alpha.todense())
 	return alpha
 
-def normL1_omp(x,A,R):
+def normL1_omp(x, A, R):
 	# minimizacion L1
 	X = np.asfortranarray(np.matrix(x).transpose())
 	D = np.asfortranarray(A.transpose())
@@ -181,7 +204,7 @@ def normL1_omp(x,A,R):
 	return alpha
 
 
-def sortAndSelect(registro,tau,s,cantPersonas,display=False):
+def sortAndSelect(registro, tau, s, cantPersonas, display=False):
 	seleccionFinal = np.zeros(cantPersonas)
 	idx_sort = np.argsort(registro[1,:])
 	sort = registro[:,idx_sort]
@@ -196,7 +219,7 @@ def sortAndSelect(registro,tau,s,cantPersonas,display=False):
 	return seleccionFinal
 	
 
-def modelling(Y,Q,R):
+def modelling(Y, Q, R):
 
 	YP = np.zeros(0)
 	YC = np.zeros(0)
@@ -227,13 +250,13 @@ def modelling(Y,Q,R):
 	return YC,YP
 
 
-def getPhotoIdx(photoName,photoList):
+def getPhotoIdx(photoName, photoList):
 	for i, j in enumerate(photoList):
 		if j[0] == photoName:
 			return i
 
 
-def zeroFill(array,outputLength):
+def zeroFill(array, outputLength):
 	length = len(array)
 	rest = outputLength - length
 	if rest >= 0:

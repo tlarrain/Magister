@@ -122,3 +122,10 @@ def wiener(I):
 	W = np.uint8(W)
 	return W
 
+
+def fixedLengthString(longString, shortString):
+	diff = len(longString) - len(shortString)
+	outString = ' '*diff
+	outString += shortString
+	return outString	
+
