@@ -16,12 +16,12 @@ import cv2
 
 
 # Parámetros
-m = 625				# Cantidad de patches seleccionados por foto para A
-m2 = 144 			# Cantidad de patches para Matriz S
+m = 400				# Cantidad de patches seleccionados por foto para A
+m2 = 400			# Cantidad de patches para Matriz S
 height = 100		# Alto del resize de la imagen
 width = 100			# Ancho del resize de la imagen
-a = 25				# Alto del patch
-b = 25				# Ancho del patch
+a = 18				# Alto del patch
+b = 18				# Ancho del patch
 alpha = 0.5 		# Peso del centro
 Q = 5				# Cluster Padres
 R = 5 				# Cluser Hijos
@@ -38,11 +38,11 @@ trainTimeAcumulado = 0
 
 
 # Datos de entrada del dataset
-dataBase = "ORL"
+dataBase = "AR"
 rootPath = miscUtils.getDataBasePath(dataBase)
 
 cantPhotos = miscUtils.photosPerPerson(rootPath)
-cantPhotosDict = 1
+cantPhotosDict = 10
 cantPhotosSparse = cantPhotos-cantPhotosDict-1
 
 U = asr.LUT(height,width,a,b) # Look Up Table
@@ -189,6 +189,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 
 # RESULTADOS FINALES
 print "Experimento finalizado"
+print "Base de Datos: ", dataBase
 print "Cantidad de personas: ", cantPersonas
 print "Fotos para diccionario: ", cantPhotosDict
 print "Fotos para base de datos: ", cantPhotosSparse , "\n"
