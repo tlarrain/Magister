@@ -28,7 +28,7 @@ R = 5 				# Cluser Hijos
 sub = 1				# Subsample
 sparseThreshold = 0 # Umbral para binarizar la representación sparse
 cantPersonas = 20 	# Cantidad de personas para el experimento
-
+distType = 'hamming'
 
 # Inicializacion variables control
 cantIteraciones = 100
@@ -38,11 +38,11 @@ trainTimeAcumulado = 0
 
 
 # Datos de entrada del dataset
-dataBase = "AR"
+dataBase = "ORL"
 rootPath = miscUtils.getDataBasePath(dataBase)
 
 cantPhotos = miscUtils.photosPerPerson(rootPath)
-cantPhotosDict = 10
+cantPhotosDict = 1
 cantPhotosSparse = cantPhotos-cantPhotosDict-1
 
 U = asr.LUT(height,width,a,b) # Look Up Table
@@ -107,13 +107,11 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 		
 		for j in range(cantPhotosSparse):
 			idx = j+cantPhotosDict
-			routePhoto = os.path.join(route, photos[idxPhoto[idx]])
-
-			I = miscUtils.readScaleImage(routePhoto, width, height)
-			# Generacion de esquinas superiores izquierdas aleatorias (i,j)
-			Y = asr.patches(I, ii, jj, U, a, b, alpha, sub)
 			
-			alpha1 = asr.normL1_omp(Y, YC, R)
+			routePhoto = os.path.join(route, photos[idxPhoto[idx]])
+			I = miscUtils.readScaleImage(routePhoto, width, height)
+			
+			alpha1 = asr.fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub)
 			Ysparse = miscUtils.concatenate(alpha1, Ysparse, 'horizontal')
 			
 
@@ -144,12 +142,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 		routePhoto = os.path.join(route, photos[idxPhoto[cantPhotos-1]])
 		
 		I = miscUtils.readScaleImage(routePhoto, width, height) # lectura de la imagne
-		Y = asr.patches(I, ii, jj, U, a, b, alpha, sub) # generación de parches
-
-		
-		alpha1 = asr.normL1_omp(Y, YC, R) # representación sparse
-		
-		# alpha1 = asr.normL1_lasso(Y, YC, R)
+		alpha1 = asr.fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub)
 		
 		# Inicialización variables de testing
 		resto = float('inf')
@@ -163,9 +156,10 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 		
 		for j in range(cantPersonas*cantPhotosSparse):
 			
-			Yclass = YsparseBinary[j*m2:(j+1)*m2, :] # matriz sparse que representa la foto
+			Yclass = YsparseBinary[j, :] # matriz sparse que representa la foto
 			
-			resta = np.abs(Yclass-alphaBinary) # valor absoluto de la resta
+			resta = asr.distance(Yclass,alphaBinary,distType) # valor absoluto de la resta
+			
 			restoAux = np.sum(resta) # cantidad de elementos no negativos de la resta
 
 			# Encuentra la resta con menor error

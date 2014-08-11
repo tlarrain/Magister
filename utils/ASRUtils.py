@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import spams
 from scipy import signal
+from scipy.spatial import distance as dist
 
 
 def LUT(h, w, a, b):
@@ -250,21 +251,42 @@ def modelling(Y, Q, R):
 	return YC,YP
 
 
-def getPhotoIdx(photoName, photoList):
-	for i, j in enumerate(photoList):
-		if j[0] == photoName:
-			return i
+def fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, tipo='omp'):
+	# Generación de fingerprint sparse de la imagen I	
+	height = I.shape[0]
+	width = I.shape[1]
+	Y = patches(I, ii, jj, U, a, b, alpha, sub)
+	if tipo == 'omp':
+		alpha1 = normL1_omp(Y, YC, R)
+		alpha1 = np.reshape(alpha1,(alpha1.shape[0]*alpha1.shape[1],1))
+		return alpha1
 
+	if tipo == 'lasso':
+		alpha1 = normL1_lasso(Y, YC, R)
+		alpha1 = np.reshape(alpha1,(alpha1.shape[0]*alpha1.shape[1],1))
+		return alpha1
 
-def zeroFill(array, outputLength):
-	length = len(array)
-	rest = outputLength - length
-	if rest >= 0:
-		return np.append(array,np.zeros(rest))
 	else:
-		print "Output length smaller than original array"
-		return array	
+		print "Tipo no válido"
+		exit()	
 
+def distance(array1, array2, tipo):
+	# Distintos tipos de métricas de distancia
+
+	if tipo == 'absDiff':
+		return np.abs(array1-array2)
+
+	if tipo == 'euclidean':
+		return	dist.euclidean(array1,array2)
+
+	if tipo == 'hamming':
+		return dist.hamming(array1,array2)
+
+	if tipo == 'chiSquare':
+		return 0.5*((array1-array2)**2)/(array1+array2)
+	else:
+		print "Tipo de distancia no válido"
+		exit()
 
 def returnUnique(array):
 	arrayUnique, idx = np.unique(array,return_index = True)		
