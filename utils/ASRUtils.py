@@ -272,9 +272,9 @@ def fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, tipo='omp'):
 
 def distance(array1, array2, tipo):
 	# Distintos tipos de métricas de distancia
-
+	eps = 1e-5
 	if tipo == 'absDiff':
-		return np.abs(array1-array2)
+		return np.sum(np.abs(array1-array2))
 
 	if tipo == 'euclidean':
 		return	dist.euclidean(array1,array2)
@@ -283,7 +283,7 @@ def distance(array1, array2, tipo):
 		return dist.hamming(array1,array2)
 
 	if tipo == 'chiSquare':
-		return 0.5*((array1-array2)**2)/(array1+array2)
+		return np.sum(0.5*np.divide(((array1-array2)**2),(array1+array2+eps)))
 	else:
 		print "Tipo de distancia no válido"
 		exit()

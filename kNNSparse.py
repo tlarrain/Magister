@@ -28,7 +28,7 @@ R = 5 				# Cluser Hijos
 sub = 1				# Subsample
 sparseThreshold = 0 # Umbral para binarizar la representación sparse
 cantPersonas = 20 	# Cantidad de personas para el experimento
-distType = 'hamming'
+distType = 'euclidean'
 
 # Inicializacion variables control
 cantIteraciones = 100
@@ -117,7 +117,8 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 
 	# Binarización representaciones sparse
 	Ysparse = Ysparse.transpose()
-	YsparseBinary = (Ysparse < -sparseThreshold) | (Ysparse > sparseThreshold) # por umbral
+	if  distType != 'euclidean' and distType != 'chiSquare':  
+		Ysparse = (Ysparse < -sparseThreshold) | (Ysparse > sparseThreshold) # por umbral
 	# YsparseBinary = Ysparse != 0 # distintas de cero
 	
 	# Inicialización variables de control
@@ -146,22 +147,21 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 		
 		# Inicialización variables de testing
 		resto = float('inf')
-		restoAux = float('inf')
 		correcto = cantPersonas+1
 		
 		# Binarización representaciones sparse
 		alpha1 = alpha1.transpose()
-		alphaBinary = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold) # por umbral
+		if  distType != 'euclidean' and distType != 'chiSquare':
+			alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold) # por umbral
 		# alphaBinary = alpha1 != 0 # distintas de cero
 		
 		for j in range(cantPersonas*cantPhotosSparse):
 			
-			Yclass = YsparseBinary[j, :] # matriz sparse que representa la foto
+			Yclass = Ysparse[j, :] # matriz sparse que representa la foto
 			
-			resta = asr.distance(Yclass,alphaBinary,distType) # valor absoluto de la resta
+			restoAux = asr.distance(Yclass,alpha1,distType) # valor absoluto de la resta
 			
-			restoAux = np.sum(resta) # cantidad de elementos no negativos de la resta
-
+			
 			# Encuentra la resta con menor error
 			if restoAux < resto:
 				correcto = responses[j]
