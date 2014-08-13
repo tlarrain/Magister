@@ -36,7 +36,7 @@ def uninorm(Y):
 	return Y
 
 
-def patches(I, ii, jj, U, a, b, alpha, sub):
+def patches(I, ii, jj, U, a, b, alpha, sub,useAlpha=True):
 	# Extrae todos los patches cuya esquina superior izquierda es (ii,jj)
 	ii = ii.astype(int)
 	jj = jj.astype(int)
@@ -47,14 +47,16 @@ def patches(I, ii, jj, U, a, b, alpha, sub):
 	m1 = U.shape[1]
 	Yaux = np.zeros((n,m1))
 	Yaux = Iv[U[kk,:].astype(int)]
-	Yaux = Yaux[:,0::sub]	
-	ixo = np.array([ii+1,jj+1]).transpose()
-	ixi = ixo.copy()
-	centro = ixo +np.array([a/2,b/2]) 
-	ixo = (ixo +np.array([a/2,b/2]))*alpha
-	Yaux = np.hstack((Yaux,ixo))
+	Yaux = Yaux[:,0::sub]
+
+	if useAlpha:	
+		ixo = np.array([ii+1,jj+1]).transpose()
+		ixi = ixo.copy()
+		centro = ixo +np.array([a/2,b/2]) 
+		ixo = (ixo +np.array([a/2,b/2]))*alpha
+		Yaux = np.hstack((Yaux,ixo))
+
 	Y = uninorm(Yaux)
-	# Y = Yaux.copy()
 	return Y
 
 
@@ -251,11 +253,11 @@ def modelling(Y, Q, R):
 	return YC,YP
 
 
-def fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, tipo='omp'):
+def fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, useAlpha=True, tipo='omp'):
 	# Generación de fingerprint sparse de la imagen I	
 	height = I.shape[0]
 	width = I.shape[1]
-	Y = patches(I, ii, jj, U, a, b, alpha, sub)
+	Y = patches(I, ii, jj, U, a, b, alpha, sub, useAlpha)
 	if tipo == 'omp':
 		alpha1 = normL1_omp(Y, YC, R)
 		alpha1 = np.reshape(alpha1,(alpha1.shape[0]*alpha1.shape[1],1))
@@ -267,8 +269,9 @@ def fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, tipo='omp'):
 		return alpha1
 
 	else:
-		print "Tipo no válido"
+		print "Tipo de minimización no válido"
 		exit()	
+
 
 def distance(array1, array2, tipo):
 	# Distintos tipos de métricas de distancia
@@ -287,6 +290,7 @@ def distance(array1, array2, tipo):
 	else:
 		print "Tipo de distancia no válido"
 		exit()
+
 
 def returnUnique(array):
 	arrayUnique, idx = np.unique(array,return_index = True)		

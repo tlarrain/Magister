@@ -104,12 +104,12 @@ def readScaleImage(route, width, height):
 		return np.zeros(0)
 
 
-def drawPatch(I, corner, a, b):
+def drawPatch(I, corner, a, b, blue, green, red):
 	# Dibuja un patch de tamanio (a,b) desde la esquina corner en la imagen I.
 	
 	x = int(corner[1])
 	y = int(corner[0])
-	cv2.rectangle(I,(x,y),(x+a,y+b),(255,0,0))
+	cv2.rectangle(I,(x,y),(x+a,y+b),(blue,green,red))
 	
 	return I
 

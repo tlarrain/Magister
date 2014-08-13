@@ -23,12 +23,14 @@ width = 100			# Ancho del resize de la imagen
 a = 18				# Alto del patch
 b = 18				# Ancho del patch
 alpha = 0.5 		# Peso del centro
-Q = 5				# Cluster Padres
+Q = 10				# Cluster Padres
 R = 5 				# Cluser Hijos
 sub = 1				# Subsample
 sparseThreshold = 0 # Umbral para binarizar la representación sparse
 cantPersonas = 20 	# Cantidad de personas para el experimento
-distType = 'euclidean'
+distType = 'absDiff'
+useAlpha = True
+
 
 # Inicializacion variables control
 cantIteraciones = 100
@@ -46,7 +48,9 @@ cantPhotosDict = 1
 cantPhotosSparse = cantPhotos-cantPhotosDict-1
 
 U = asr.LUT(height,width,a,b) # Look Up Table
-ii,jj = asr.grilla_v2(height, width, a, b, m) # generacion de esquinas superiores izquierdas aleatorias (i,j)
+
+iiDict,jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de parches
+iiSparse,jjSparse = asr.grilla_v2(height, width, a, b, m2) # Grilla de m2 cantidad de parches
 
 for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	
@@ -80,7 +84,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 			routePhoto = os.path.join(route, photos[idxPhoto[j]]) # ruta de la foto j
 			I = miscUtils.readScaleImage(routePhoto, width, height) # lectura de la imagen
 
-			Yaux = asr.patches(I, ii, jj, U, a, b, alpha, sub) # extracción de parches
+			Yaux = asr.patches(I, iiDict, jjDict, U, a, b, alpha, sub, useAlpha) # extracción de parches
 		
 			# Concatenación de matrices Yaux
 			Y = miscUtils.concatenate(Yaux, Y, 'vertical')
@@ -95,8 +99,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	Y = np.array([])
 	Ysparse = np.array([])
 
-	# Grilla de m2 cantidad de parches
-	ii,jj = asr.grilla_v2(height, width, a, b, m2)
+	
 
 
 
@@ -111,15 +114,15 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 			routePhoto = os.path.join(route, photos[idxPhoto[idx]])
 			I = miscUtils.readScaleImage(routePhoto, width, height)
 			
-			alpha1 = asr.fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub)
+			alpha1 = asr.fingerprint(I, U, YC, iiSparse, jjSparse, R, a, b, alpha, sub, useAlpha)
 			Ysparse = miscUtils.concatenate(alpha1, Ysparse, 'horizontal')
 			
 
-	# Binarización representaciones sparse
+	
 	Ysparse = Ysparse.transpose()
-	if  distType != 'euclidean' and distType != 'chiSquare':  
+	if  distType != 'euclidean' and distType != 'chiSquare':  # Si la distancia elegida no es euclideana o chiSquare se binariza
 		Ysparse = (Ysparse < -sparseThreshold) | (Ysparse > sparseThreshold) # por umbral
-	# YsparseBinary = Ysparse != 0 # distintas de cero
+		# YsparseBinary = Ysparse != 0 # distintas de cero
 	
 	# Inicialización variables de control
 	trainTime = time.time() - beginTime
@@ -143,7 +146,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 		routePhoto = os.path.join(route, photos[idxPhoto[cantPhotos-1]])
 		
 		I = miscUtils.readScaleImage(routePhoto, width, height) # lectura de la imagne
-		alpha1 = asr.fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub)
+		alpha1 = asr.fingerprint(I, U, YC, iiSparse, jjSparse, R, a, b, alpha, sub, useAlpha)
 		
 		# Inicialización variables de testing
 		resto = float('inf')
@@ -184,6 +187,8 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 # RESULTADOS FINALES
 print "Experimento finalizado"
 print "Base de Datos: ", dataBase
+print "Tipo de distancia: ", distType
+print "Se utilizó alfa: ", useAlpha
 print "Cantidad de personas: ", cantPersonas
 print "Fotos para diccionario: ", cantPhotosDict
 print "Fotos para base de datos: ", cantPhotosSparse , "\n"
