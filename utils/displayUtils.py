@@ -9,9 +9,9 @@ import numpy as np
 import utils.ASRUtils as asr
 import utils.miscUtils as miscUtils
 import cv2
+import os
 
-
-def plotGrilla(I,ii,jj,a,b,m):
+def displayGrilla(I,ii,jj,a,b,m):
 	# Dibuja la grilla en colores intercalados
 	for i in range(m):
 		
@@ -24,13 +24,15 @@ def plotGrilla(I,ii,jj,a,b,m):
 	cv2.namedWindow("Grilla")
 	cv2.imshow("Grilla",np.uint8(I))
 	cv2.waitKey()
-	return I
 
-def displayResults(correctPhoto, cantPhotosDict, cantPhotosSparse, cantPhotosDict, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):	
+
+def displayResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):	
+	# Desplega la imagen query y aquella a la que encontró más parecida. Para continuar de presiona cualquier tecla
 	cantPersonas = len(correctPhoto)
 	possibleMatchPhotos = idxPhoto[cantPhotosDict:cantPhotosSparse+1]
 	displayImage = np.array([])
-	
+	idxTestPhoto = len(idxPhoto)-1
+
 	for i in range(cantPersonas):
 		
 		matchPhoto = correctPhoto[i]
@@ -61,19 +63,3 @@ def displayResults(correctPhoto, cantPhotosDict, cantPhotosSparse, cantPhotosDic
 	cv2.waitKey()
 
 
-width = 400
-height = 400
-a = 25*4
-b = 25*4
-m = 400
-
-dataBase = "AR"
-rootPath = miscUtils.getDataBasePath(dataBase)
-routePhoto = rootPath + '01/'+'face_001_01.png'
-
-I = cv2.imread(routePhoto)
-I = cv2.resize(I,(width,height))	
-
-iiDict,jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de parches
-
-plotGrilla(I,iiDict,jjDict,a,b,m)

@@ -8,6 +8,7 @@ Tomás Larrain A.
 import numpy as np
 import utils.ASRUtils as asr
 import utils.miscUtils as miscUtils
+import utils.displayUtils as displayUtils
 import os
 import time
 import cv2
@@ -23,29 +24,36 @@ width = 100			# Ancho del resize de la imagen
 a = 18				# Alto del patch
 b = 18				# Ancho del patch
 alpha = 0.5 		# Peso del centro
-Q = 10				# Cluster Padres
+Q = 5				# Cluster Padres
 R = 5 				# Cluser Hijos
 sub = 1				# Subsample
 sparseThreshold = 0 # Umbral para binarizar la representación sparse
 cantPersonas = 20 	# Cantidad de personas para el experimento
 distType = 'absDiff'
 useAlpha = True
-
+display = True
+dispWidth = 100
+dispHeight = 100
 
 # Inicializacion variables control
-cantIteraciones = 100
+cantIteraciones = 1
 porcAcumulado = 0
 testTimeAcumulado = 0
 trainTimeAcumulado = 0
 
 
 # Datos de entrada del dataset
-dataBase = "ORL"
+dataBase = "AR"
 rootPath = miscUtils.getDataBasePath(dataBase)
 
-cantPhotos = miscUtils.photosPerPerson(rootPath)
+cantPhotosPerPerson = miscUtils.photosPerPerson(rootPath)
+
 cantPhotosDict = 1
-cantPhotosSparse = cantPhotos-cantPhotosDict-1
+cantPhotosSparse = 10
+cantPhotos = cantPhotosDict+cantPhotosSparse+1
+
+idxTestPhoto = cantPhotos-1
+
 
 U = asr.LUT(height,width,a,b) # Look Up Table
 
@@ -64,8 +72,8 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	YP = np.array([])
 
 	# Seleccion aleatoria de individuos
-	idxPhoto, idxPerson = miscUtils.randomSelection(rootPath, cantPhotos, cantPersonas)
-	
+	idxPhoto, idxPerson = miscUtils.randomSelection(rootPath, cantPhotosPerPerson, cantPhotos, cantPersonas)
+
 	##################################
 	######### ENTRENAMIENTO ##########
 	##################################
@@ -83,7 +91,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 			
 			routePhoto = os.path.join(route, photos[idxPhoto[j]]) # ruta de la foto j
 			I = miscUtils.readScaleImage(routePhoto, width, height) # lectura de la imagen
-
+			
 			Yaux = asr.patches(I, iiDict, jjDict, U, a, b, alpha, sub, useAlpha) # extracción de parches
 		
 			# Concatenación de matrices Yaux
@@ -130,7 +138,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	aciertos = 0
 	
 	responses = miscUtils.responseVector(cantPersonas, idxPerson, cantPhotosSparse)
-	
+	correctPhoto = np.zeros(cantPersonas)
 
 	##################################
 	############ TESTING #############
@@ -139,11 +147,13 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	print "Testing..."
 	beginTime = time.time()
 	
+	
+		
 	for i in range(cantPersonas):
 		# Ruta de la foto de testing
 		route = os.path.join(rootPath, idxPerson[i])
 		photos = os.listdir(route)
-		routePhoto = os.path.join(route, photos[idxPhoto[cantPhotos-1]])
+		routePhoto = os.path.join(route, photos[idxPhoto[idxTestPhoto]])
 		
 		I = miscUtils.readScaleImage(routePhoto, width, height) # lectura de la imagne
 		alpha1 = asr.fingerprint(I, U, YC, iiSparse, jjSparse, R, a, b, alpha, sub, useAlpha)
@@ -157,7 +167,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 		if  distType != 'euclidean' and distType != 'chiSquare':
 			alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold) # por umbral
 		# alphaBinary = alpha1 != 0 # distintas de cero
-		
+		idxCorrect = 0
 		for j in range(cantPersonas*cantPhotosSparse):
 			
 			Yclass = Ysparse[j, :] # matriz sparse que representa la foto
@@ -167,13 +177,15 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 			
 			# Encuentra la resta con menor error
 			if restoAux < resto:
+				correctPhoto[i] = j
 				correcto = responses[j]
 				resto = restoAux
-
+		
 		# Compara con vector de clasificación ideal
 		if int(correcto) == int(idxPerson[i]):
 			aciertos += 1
-	
+			
+
 	# Control de tiempo
 	testTime = time.time() - beginTime
 	testTimeAcumulado += testTime/cantPersonas	
@@ -182,8 +194,14 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	print "Porcentaje Aciertos: " , float(aciertos)/cantPersonas*100, "%\n"	
 	porcAcumulado += float(aciertos)/cantPersonas*100
 
+	if display:
+		displayUtils.displayResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight)
+	
 
 
+
+
+	
 # RESULTADOS FINALES
 print "Experimento finalizado"
 print "Base de Datos: ", dataBase
@@ -212,7 +230,6 @@ print "Tiempo de testing promedio: ", testTimeAcumulado/cantIteraciones, " segun
 print "Porcentaje acumulado: ", porcAcumulado/cantIteraciones, "%\n"
 
 print "Tiempo total del test: ", (testTimeAcumulado + trainTimeAcumulado)/60, " minutos"
-
 
 
 

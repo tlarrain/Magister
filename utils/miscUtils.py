@@ -57,14 +57,14 @@ def photosPerPerson(dataBasePath):
 	return cantFotos			
 
 
-def randomSelection(dataBasePath, cantFotos, cantPersonas):
+def randomSelection(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas):
 	# Selección de fotos y de personas aleatorio
 
 	idxPerson = getPersonIDs(dataBasePath)
 	auxIdx = np.random.permutation(len(idxPerson))[:cantPersonas]
 	
 	idxPerson = idxPerson[auxIdx]
-	idxFoto = np.random.permutation(cantFotos)
+	idxFoto = np.random.permutation(cantPhotosPerPerson)[:cantPhotos]
 	
 	return idxFoto, idxPerson
 
