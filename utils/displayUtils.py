@@ -26,19 +26,19 @@ def displayGrilla(I,ii,jj,a,b,m):
 	cv2.waitKey()
 
 
-def displayResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):	
+def generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):	
 	# Desplega la imagen query y aquella a la que encontró más parecida. Para continuar de presiona cualquier tecla
-	cantPersonas = len(correctPhoto)
+	cantPersonas = correctPhoto.shape[0]
 	possibleMatchPhotos = idxPhoto[cantPhotosDict:cantPhotosSparse+1]
 	displayImage = np.array([])
 	idxTestPhoto = len(idxPhoto)-1
 
 	for i in range(cantPersonas):
 		
-		matchPhoto = correctPhoto[i]
+		matchPhoto = correctPhoto[i,0]
 		matchPhoto = int(matchPhoto%cantPhotosSparse)
 		matchPhoto = possibleMatchPhotos[matchPhoto]
-		matchPerson = int(correctPhoto[i])/int(cantPhotosSparse)
+		matchPerson = int(correctPhoto[i,0])/int(cantPhotosSparse)
 		matchPerson = idxPerson[matchPerson]
 		
 		queryPerson = idxPerson[i]
@@ -52,14 +52,49 @@ def displayResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idx
 		matchPhotos = os.listdir(matchRoute)
 		matchRoutePhoto = os.path.join(matchRoute, matchPhotos[matchPhoto])
 
-		Iq = miscUtils.readScaleImage(queryRoutePhoto, dispWidth, dispHeight)
-		Im = miscUtils.readScaleImage(matchRoutePhoto, dispWidth, dispHeight)
+		Iq = miscUtils.readScaleImageColor(queryRoutePhoto, dispWidth, dispHeight)
+		Im = miscUtils.readScaleImageColor(matchRoutePhoto, dispWidth, dispHeight)
+
+		if correctPhoto[i,1] == 0:
+			Im = miscUtils.drawPatch(Im, (0,0), dispWidth-1, dispHeight-1, 0, 0, 255)
+
+		else:
+			Im = miscUtils.drawPatch(Im, (0,0), dispWidth-1, dispHeight-1, 0, 255, 0)			
 
 		fila = np.hstack((Iq,Im))
 		displayImage = miscUtils.concatenate(fila, displayImage, 'vertical')
 
-	cv2.namedWindow('Resultado', cv2.WINDOW_AUTOSIZE)
-	cv2.imshow('Resultado', np.uint8(displayImage))
-	cv2.waitKey()
+	return np.uint8(displayImage)
+	
+
+def generateAllPhotos(cantPersonas, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):
+
+	displayImage = np.array([])
+	blackSpace = np.zeros((dispHeight,20)) # espacio para separar fotos del diccionario de base de datos
+
+	for i in range(cantPersonas):
+		fila = np.array([])
+		route = os.path.join(rootPath, idxPerson[i])
+		photos = os.listdir(route)
+
+		for d in range(cantPhotosDict):
+			routePhoto = os.path.join(route, photos[idxPhoto[d]]) # ruta de la foto j
+			I = miscUtils.readScaleImageBW(routePhoto, dispWidth, dispHeight) # lectura de la imagen
+			fila = miscUtils.concatenate(I, fila, 'horizontal')
+
+		fila = miscUtils.concatenate(blackSpace, fila, 'horizontal')
+
+		for s in range(cantPhotosSparse):
+			
+			idx = s+cantPhotosDict
+			routePhoto = os.path.join(route, photos[idxPhoto[idx]])
+			I = miscUtils.readScaleImageBW(routePhoto, dispWidth, dispHeight)
+			fila = miscUtils.concatenate(I, fila, 'horizontal')
+
+		displayImage = miscUtils.concatenate(fila, displayImage, 'vertical')
+
+	return np.uint8(displayImage)
+	
+
 
 

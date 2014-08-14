@@ -92,7 +92,7 @@ def concatenate(auxMatrix, acumMatrix, direction):
 	return acumMatrix
 
 
-def readScaleImage(route, width, height):
+def readScaleImageBW(route, width, height):
 	# Lee la imagen de route, la pasa a B&N y la escala segun width y height
 	It = cv2.imread(route)
 	if It is not None:	 
@@ -102,6 +102,18 @@ def readScaleImage(route, width, height):
 		return It
 	else:
 		return np.zeros(0)
+
+
+def readScaleImageColor(route, width, height):
+	# Lee la imagen de route, la pasa a B&N y la escala segun width y height
+	It = cv2.imread(route)
+	if It is not None:	 
+		It = np.float32(It)
+		It = cv2.resize(It,(width,height))	
+		return It
+	else:
+		return np.zeros(0)
+
 
 
 def drawPatch(I, corner, a, b, blue, green, red):
