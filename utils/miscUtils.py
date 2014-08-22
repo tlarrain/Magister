@@ -57,7 +57,66 @@ def photosPerPerson(dataBasePath):
 	return cantFotos			
 
 
-def randomSelection(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas):
+def personSelectionByPhotoAmount(dataBasePath, photoAmount):
+	# Retorna los ID de las personas que contienen >= cantidad de fotos que photoAmount
+
+	idxPerson = getPersonIDs(dataBasePath)
+	personSelection = np.array([])
+	for d in range(len(idxPerson)):
+
+		if idxPerson[d] == '.DS_Store':
+			continue
+
+		dataBase = os.path.join(dataBasePath,idxPerson[d])
+		files = os.listdir(dataBase)
+
+		if len(files)>=photoAmount:
+			personSelection = np.append(personSelection,idxPerson[d])
+
+	return personSelection
+
+
+def randomPersonSelection(dataBasePath, idxPerson, cantPersonas):
+	# Selección de fotos y de personas aleatorio
+
+	
+	auxIdx = np.random.permutation(len(idxPerson))[:cantPersonas]
+	
+	return idxPerson[auxIdx]
+
+
+def randomPhotoSelection(dataBasePath, idxPerson, cantPhotos):
+	# Selección de fotos aleatorias por persona
+	idxPhoto = np.array([])
+
+	for i in range(len(idxPerson)):
+		photos = totalPhotos(dataBasePath, idxPerson[i])
+		idxPhoto = concatenate(np.random.permutation(photos)[:cantPhotos],idxPhoto,'vertical')
+	
+	return idxPhoto
+
+def randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas):
+	
+	auxIdx = np.random.permutation(len(idxPerson))[:cantPersonas]
+	idxPerson = idxPerson[auxIdx]
+
+	idxPhoto = np.array([])
+
+	for i in range(len(idxPerson)):
+		photos = totalPhotos(dataBasePath, idxPerson[i])
+		idxPhoto = concatenate(np.random.permutation(photos)[:cantPhotos],idxPhoto,'vertical')
+	
+	return idxPerson, idxPhoto
+
+def totalPhotos(dataBasePath, idxSinglePerson):
+	# Cantidad de fotos de una sola persona 
+	personPath = os.path.join(dataBasePath, idxSinglePerson)
+	totalPhotos = len(os.listdir(personPath))
+	
+	return totalPhotos
+
+
+def randomSelectionOld(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas):
 	# Selección de fotos y de personas aleatorio
 
 	idxPerson = getPersonIDs(dataBasePath)
@@ -113,17 +172,6 @@ def readScaleImageColor(route, width, height):
 		return It
 	else:
 		return np.zeros(0)
-
-
-
-def drawPatch(I, corner, a, b, blue, green, red):
-	# Dibuja un patch de tamanio (a,b) desde la esquina corner en la imagen I.
-	
-	x = int(corner[1])
-	y = int(corner[0])
-	cv2.rectangle(I,(x,y),(x+a,y+b),(blue,green,red))
-	
-	return I
 
 
 def wiener(I):

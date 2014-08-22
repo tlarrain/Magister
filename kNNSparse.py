@@ -28,12 +28,11 @@ Q = 5					# Cluster Padres
 R = 5 					# Cluser Hijos
 sub = 1					# Subsample
 sparseThreshold = 0 	# Umbral para binarizar la representación sparse
-cantPersonas = 20 		# Cantidad de personas para el experimento
-distType = 'absDiff'	# Tipo de distancia a utilizar. Puede ser 'absDiff', 'hamming', 'euclidean' o 'chiSquare'
+distType = 'hamming'	# Tipo de distancia a utilizar. Puede ser 'hamming', 'euclidean' o 'chiSquare'
 useAlpha = True			# Usar alpha en el vector de cada patch
 display = True			# Desplegar resultados
-dispWidth = 100			# Ancho de las imágenes desplegadas
-dispHeight = 100		# Alto de las imágenes desplegadas
+dispWidth = 30			# Ancho de las imágenes desplegadas
+dispHeight = 30 		# Alto de las imágenes desplegadas
 
 # Inicializacion variables control
 cantIteraciones = 1
@@ -44,22 +43,24 @@ trainTimeAcumulado = 0
 
 # Datos de entrada del dataset
 dataBase = "AR"
-rootPath = miscUtils.getDataBasePath(dataBase)
+dataBasePath = miscUtils.getDataBasePath(dataBase)
 
-cantPhotosPerPerson = miscUtils.photosPerPerson(rootPath)
 
+
+cantPersonas = 20 		# Cantidad de personas para el experimento
 cantPhotosDict = 1
-cantPhotosSparse = 8
+cantPhotosSparse = 5
 cantPhotos = cantPhotosDict+cantPhotosSparse+1
 
 idxTestPhoto = cantPhotos-1
 
+idxPerson = miscUtils.personSelectionByPhotoAmount(dataBasePath, cantPhotos)
 
 U = asr.LUT(height,width,a,b) # Look Up Table
 
 iiDict,jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de parches
 iiSparse,jjSparse = asr.grilla_v2(height, width, a, b, m2) # Grilla de m2 cantidad de parches
-black = np.zeros((dispHeight,20))
+
 
 
 for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
@@ -74,7 +75,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	YP = np.array([])
 
 	# Seleccion aleatoria de individuos
-	idxPhoto, idxPerson = miscUtils.randomSelection(rootPath, cantPhotosPerPerson, cantPhotos, cantPersonas)
+	idxPerson, idxPhoto = miscUtils.randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas)
 
 	##################################
 	######### ENTRENAMIENTO ##########
@@ -84,14 +85,16 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	for i in range(cantPersonas):
 
 		# Ruta de la persona i y lista de todas sus fotos
-		route = os.path.join(rootPath, idxPerson[i])
+		route = os.path.join(dataBasePath, idxPerson[i])
 		photos = os.listdir(route)
+		
 		
 		Y = np.array([])
 		filaDict = np.array([])
+		
 		for j in range(cantPhotosDict):
 			
-			routePhoto = os.path.join(route, photos[idxPhoto[j]]) # ruta de la foto j
+			routePhoto = os.path.join(route, photos[idxPhoto[i,j]]) # ruta de la foto j
 			I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagen
 					
 			Yaux = asr.patches(I, iiDict, jjDict, U, a, b, alpha, sub, useAlpha) # extracción de parches
@@ -114,14 +117,14 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	######### CREACION REPRESENTACIONES SPARSE ##########
 	for i in range(cantPersonas):
 	
-		route = os.path.join(rootPath, idxPerson[i])
+		route = os.path.join(dataBasePath, idxPerson[i])
 		photos = os.listdir(route)
 		
 		filaSparse = np.array([])
 		for j in range(cantPhotosSparse):
 			idx = j+cantPhotosDict
 			
-			routePhoto = os.path.join(route, photos[idxPhoto[idx]])
+			routePhoto = os.path.join(route, photos[idxPhoto[i,idx]])
 			I = miscUtils.readScaleImageBW(routePhoto, width, height)
 			
 			alpha1 = asr.fingerprint(I, U, YC, iiSparse, jjSparse, R, a, b, alpha, sub, useAlpha)
@@ -151,9 +154,9 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 			
 	for i in range(cantPersonas):
 		# Ruta de la foto de testing
-		route = os.path.join(rootPath, idxPerson[i])
+		route = os.path.join(dataBasePath, idxPerson[i])
 		photos = os.listdir(route)
-		routePhoto = os.path.join(route, photos[idxPhoto[idxTestPhoto]])
+		routePhoto = os.path.join(route, photos[idxPhoto[i,idxTestPhoto]])
 		
 		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
 		alpha1 = asr.fingerprint(I, U, YC, iiSparse, jjSparse, R, a, b, alpha, sub, useAlpha)
@@ -186,7 +189,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 			aciertos += 1
 			correctPhoto[i,1] = 1
 			
-
+	print correctPhoto[:,0]
 	# Control de tiempo
 	testTime = time.time() - beginTime
 	testTimeAcumulado += testTime/cantPersonas	
@@ -196,14 +199,9 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	porcAcumulado += float(aciertos)/cantPersonas*100
 
 	if display:
-		results = displayUtils.generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight)
-		allPhotos = displayUtils.generateAllPhotos(cantPersonas, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight)
-		cv2.namedWindow('Resultados')
-		cv2.namedWindow('Todas las fotos')
-		cv2.imshow('Resultados', results)
-		cv2.imshow('Todas las fotos', allPhotos)
-		cv2.waitKey()	
-
+		results = displayUtils.generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, dataBasePath, dispWidth, dispHeight)
+		allPhotos = displayUtils.generateAllPhotos(cantPersonas, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, dataBasePath, dispWidth, dispHeight)
+		displayUtils.displayResults(results, allPhotos)
 
 
 
