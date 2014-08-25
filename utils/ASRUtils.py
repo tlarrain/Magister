@@ -293,6 +293,25 @@ def distance(array1, array2, tipo):
 		print "Tipo de distancia no válido"
 		exit()
 
+def clasifier(Ysparse, alpha1, responses, distType):
+	# Clasificador original del algoritmo
+	total = Ysparse.shape[0]
+	resto = float('inf')
+	for j in range(total):
+			
+		Yclass = Ysparse[j, :] # matriz sparse que representa la foto
+		
+		restoAux = distance(Yclass,alpha1,distType) # valor absoluto de la resta
+		
+		
+		# Encuentra la resta con menor error
+		if restoAux < resto:
+			correctPhoto = j
+			correctID = responses[j]
+			resto = restoAux
+
+	return correctPhoto, correctID
+
 
 def returnUnique(array):
 	arrayUnique, idx = np.unique(array,return_index = True)		

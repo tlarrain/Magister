@@ -12,7 +12,7 @@ import utils.displayUtils as displayUtils
 import os
 import time
 import cv2
-
+from sklearn.neighbors import KNeighborsClassifier
 
 
 
@@ -29,8 +29,9 @@ R = 5 					# Cluser Hijos
 sub = 1					# Subsample
 sparseThreshold = 0 	# Umbral para binarizar la representación sparse
 distType = 'hamming'	# Tipo de distancia a utilizar. Puede ser 'hamming', 'euclidean' o 'chiSquare'
+n_neighbors = 1 		# Cantidad de vecinos a utilizar
 useAlpha = True			# Usar alpha en el vector de cada patch
-display = True			# Desplegar resultados
+display = False			# Desplegar resultados
 dispWidth = 30			# Ancho de las imágenes desplegadas
 dispHeight = 30 		# Alto de las imágenes desplegadas
 
@@ -39,6 +40,7 @@ cantIteraciones = 1
 porcAcumulado = 0
 testTimeAcumulado = 0
 trainTimeAcumulado = 0
+# neigh = KNeighborsClassifier(n_neighbors=n_neighbors,metric=distType)
 
 
 # Datos de entrada del dataset
@@ -48,8 +50,8 @@ dataBasePath = miscUtils.getDataBasePath(dataBase)
 
 
 cantPersonas = 20 		# Cantidad de personas para el experimento
-cantPhotosDict = 1
-cantPhotosSparse = 5
+cantPhotosDict = 5
+cantPhotosSparse = 20
 cantPhotos = cantPhotosDict+cantPhotosSparse+1
 
 idxTestPhoto = cantPhotos-1
@@ -109,6 +111,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 		YC = miscUtils.concatenate(YCaux, YC, 'vertical')
 		YP = miscUtils.concatenate(YPaux, YP, 'vertical')
 
+	
 	# Inicializacion de variables
 	Y = np.array([])
 	Ysparse = np.array([])
@@ -137,14 +140,17 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 		Ysparse = (Ysparse < -sparseThreshold) | (Ysparse > sparseThreshold) # por umbral
 		# YsparseBinary = Ysparse != 0 # distintas de cero
 	
+
 	# Inicialización variables de control
 	trainTime = time.time() - beginTime
 	trainTimeAcumulado += trainTime
 	aciertos = 0
 	
 	responses = miscUtils.responseVector(cantPersonas, idxPerson, cantPhotosSparse)
-	correctPhoto = np.zeros((cantPersonas,2))
+	correctPhoto = np.zeros((cantPersonas,2)) # para propositos del despliegue de las imagenes posterior
 
+	# neigh.fit(Ysparse, responses) # entrenador del algoritmo
+	
 	##################################
 	############ TESTING #############
 	##################################
@@ -163,33 +169,26 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 		
 		# Inicialización variables de testing
 		resto = float('inf')
-		correcto = cantPersonas+1
+		corrPhoto = cantPersonas+1
 		
 		# Binarización representaciones sparse
 		alpha1 = alpha1.transpose()
 		if  distType != 'euclidean' and distType != 'chiSquare':
 			alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold) # por umbral
 		# alphaBinary = alpha1 != 0 # distintas de cero
-		idxCorrect = 0
-		for j in range(cantPersonas*cantPhotosSparse):
-			
-			Yclass = Ysparse[j, :] # matriz sparse que representa la foto
-			
-			restoAux = asr.distance(Yclass,alpha1,distType) # valor absoluto de la resta
-			
-			
-			# Encuentra la resta con menor error
-			if restoAux < resto:
-				correctPhoto[i,0] = j
-				correcto = responses[j]
-				resto = restoAux
+		
+		np.save("alpha1",alpha1)
+		
+		corrPhoto, corrID = asr.clasifier(Ysparse, alpha1, responses, distType)
+		correctPhoto[i,0] = corrPhoto
+
 		
 		# Compara con vector de clasificación ideal
-		if int(correcto) == int(idxPerson[i]):
+		if int(corrID) == int(idxPerson[i]):
 			aciertos += 1
 			correctPhoto[i,1] = 1
 			
-	print correctPhoto[:,0]
+	
 	# Control de tiempo
 	testTime = time.time() - beginTime
 	testTimeAcumulado += testTime/cantPersonas	
