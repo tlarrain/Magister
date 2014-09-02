@@ -30,6 +30,8 @@ def getDataBasePath(dataBase):
 	if dataBase == 'Junji':
 		return os.path.join(facePath,"Junji/CROP/")
 
+	if dataBase == 'LFW':
+		return os.path.join(facePath, "LFW")
 	else:
 		return "No data base with " + str(dataBase) + " name in the face path"
 
@@ -123,9 +125,9 @@ def randomSelectionOld(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPerson
 	auxIdx = np.random.permutation(len(idxPerson))[:cantPersonas]
 	
 	idxPerson = idxPerson[auxIdx]
-	idxFoto = np.random.permutation(cantPhotosPerPerson)[:cantPhotos]
+	idxPhoto = np.random.permutation(cantPhotosPerPerson)[:cantPhotos]
 	
-	return idxFoto, idxPerson
+	return idxPerson, idxPhoto
 
 
 def responseVector(cantPersonas, idxPerson, cantPhotosSparse):

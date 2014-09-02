@@ -45,7 +45,7 @@ def generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, id
 	idxTestPhoto = idxPhoto.shape[1]-1
 
 	for i in range(cantPersonas):
-		possibleMatchPhotos = idxPhoto[i,cantPhotosDict:cantPhotosSparse+1]
+		possibleMatchPhotos = idxPhoto[i,0:cantPhotosSparse+1]
 		matchPhoto = correctPhoto[i,0]
 		matchPhoto = int(matchPhoto%cantPhotosSparse)
 		matchPhoto = possibleMatchPhotos[matchPhoto]
@@ -97,7 +97,8 @@ def generateAllPhotos(cantPersonas, cantPhotosDict, cantPhotosSparse, idxPhoto, 
 
 		for s in range(cantPhotosSparse):
 			
-			idx = s+cantPhotosDict
+			# idx = s+cantPhotosDict
+			idx = s
 			routePhoto = os.path.join(route, photos[idxPhoto[i,idx]])
 			I = miscUtils.readScaleImageColor(routePhoto, dispWidth, dispHeight)
 			fila = miscUtils.concatenate(I, fila, 'horizontal')
