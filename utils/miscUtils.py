@@ -19,19 +19,19 @@ def getDataBasePath(dataBase):
 	facePath = getFacePath()
 
 	if dataBase == 'AR':
-		return os.path.join(facePath,"AR/CROP/")
+		return os.path.join(facePath,"AR/CROP/"), 26
 
 	if dataBase == 'ORL':
-		return os.path.join(facePath,"ORL/NOCROP/")
+		return os.path.join(facePath,"ORL/NOCROP/"), 10
 
 	if dataBase == 'Nutrimento':
-		return os.path.join(facePath,"Nutrimento/CROP/")
+		return os.path.join(facePath,"Nutrimento/CROP/"), 0
 
 	if dataBase == 'Junji':
-		return os.path.join(facePath,"Junji/CROP/")
+		return os.path.join(facePath,"Junji/CROP/"), 0
 
 	if dataBase == 'LFW':
-		return os.path.join(facePath, "LFW")
+		return os.path.join(facePath, "LFW"), 0
 	else:
 		return "No data base with " + str(dataBase) + " name in the face path"
 
@@ -127,6 +127,8 @@ def randomSelectionOld(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPerson
 	idxPerson = idxPerson[auxIdx]
 	idxPhoto = np.random.permutation(cantPhotosPerPerson)[:cantPhotos]
 	
+	idxPhoto = np.tile(idxPhoto,(cantPersonas,1))
+
 	return idxPerson, idxPhoto
 
 

@@ -13,6 +13,7 @@ from scipy.spatial import distance as dist
 from sklearn.neighbors import KNeighborsClassifier
 import os
 
+from scipy import io
 def LUT(h, w, a, b):
 	# Genera una Look Up Table para extraer parches de axb de una imagen de hxw
 	U = np.zeros(((h-a+1)*(w-b+1),a*b))
@@ -211,7 +212,7 @@ def normL1_omp(x, A, R):
 	D = np.float64(D)
 	numThreads = -1
 	eps = 0.0
-	alpha = spams.omp(X,D = D,L = R,eps = eps,return_reg_path = False,numThreads = numThreads)
+	alpha = spams.omp(X, D = D, L = R, eps = eps, return_reg_path = False, numThreads = numThreads)
 
 	alpha = np.array(alpha.todense())
 	return alpha
@@ -233,13 +234,14 @@ def sortAndSelect(registro, tau, s, cantPersonas, display=False):
 	
 
 def modelling(Y, Q, R):
-
+	# Construye el diccionario
 	YP = np.zeros(0)
 	YC = np.zeros(0)
 	Y = np.float32(Y)
 	
 	criteria = (cv2.TERM_CRITERIA_MAX_ITER,1000, 1e-3)
-	ret,labels,centers = cv2.kmeans(Y,Q,criteria,1,cv2.KMEANS_RANDOM_CENTERS)
+	# criteria = (cv2.TERM_CRITERIA_EPS,1000, 0)
+	ret,labels,centers = cv2.kmeans(Y,Q,criteria,1,cv2.KMEANS_PP_CENTERS)
 	YP = centers.copy()
 	
 	# Clusteriza en los Hijos
@@ -248,7 +250,7 @@ def modelling(Y, Q, R):
 		idx = np.nonzero(labels==i)[0]
 		z = Y[idx,:].copy()
 		if R<len(idx): # Si el cluster es muy chico, lo rellena con su centro de masa
-			ret2,labels2,centers2 = cv2.kmeans(z,R,criteria,1,cv2.KMEANS_RANDOM_CENTERS)
+			ret2,labels2,centers2 = cv2.kmeans(z,R,criteria,1,cv2.KMEANS_PP_CENTERS)
 			CC = uninorm(centers2)
 		else:
 			CC = z.copy()
@@ -263,19 +265,77 @@ def modelling(Y, Q, R):
 	return YC,YP
 
 
+def generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict):
 
-def fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, useAlpha=True, tipo='omp'):
+	cantPersonas = len(idxPerson)
+	YC = np.array([])
+	YP = np.array([])
+	for i in range(cantPersonas):
+
+		# Ruta de la persona i y lista de todas sus fotos
+		route = os.path.join(dataBasePath, idxPerson[i])
+		photos = os.listdir(route)
+		
+		Y = np.array([])
+		
+		for j in range(cantPhotosDict):
+			
+			routePhoto = os.path.join(route, photos[idxPhoto[i,j]]) # ruta de la foto j
+			I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagen
+					
+			Yaux = patches(I, iiDict, jjDict, U, a, b, alpha, sub, useAlpha) # extracción de parches
+		
+			# Concatenación de matrices Yaux
+			Y = miscUtils.concatenate(Yaux, Y, 'vertical')
+
+			YCaux,YPaux = modelling(Y, Q, R) # Clusteriza la matriz Y en padres e hijos
+			
+		# Concatenación de matrices YC e YP
+		YC = miscUtils.concatenate(YCaux, YC, 'vertical')
+		YP = miscUtils.concatenate(YPaux, YP, 'vertical')
+
+	return YC
+
+
+def generateQueryBase(dataBasePath, idxPerson, idxPhoto, cantPhotosSparse, U, YC, iiSparse, jjSparse, L, width, height, a, b, alpha, sub, 
+	useAlpha, sparseThreshold, distType):
+	
+	Ysparse = np.array([])
+	cantPersonas = len(idxPerson)
+	
+	for i in range(cantPersonas):
+	
+		route = os.path.join(dataBasePath, idxPerson[i])
+		photos = os.listdir(route)
+		
+		for j in range(cantPhotosSparse):
+			# idx = j+cantPhotosDict
+			idx = j
+			routePhoto = os.path.join(route, photos[idxPhoto[i,idx]])
+			I = miscUtils.readScaleImageBW(routePhoto, width, height)
+			
+			alpha1 = fingerprint(I, U, YC, iiSparse, jjSparse, L, a, b, alpha, sub, useAlpha)
+			Ysparse = miscUtils.concatenate(alpha1, Ysparse, 'horizontal')
+		
+	Ysparse = Ysparse.transpose()
+	
+	# Ysparse = (Ysparse < -sparseThreshold) | (Ysparse > sparseThreshold) # por umbral
+	Ysparse = Ysparse != 0
+	return Ysparse
+
+
+def fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha=True, tipo='omp'):
 	# Generación de fingerprint sparse de la imagen I	
 	height = I.shape[0]
 	width = I.shape[1]
 	Y = patches(I, ii, jj, U, a, b, alpha, sub, useAlpha)
 	if tipo == 'omp':
-		alpha1 = normL1_omp(Y, YC, R)
+		alpha1 = normL1_omp(Y, YC, L)
 		alpha1 = np.reshape(alpha1,(alpha1.shape[0]*alpha1.shape[1],1))
 		return alpha1
 
 	if tipo == 'lasso':
-		alpha1 = normL1_lasso(Y, YC, R)
+		alpha1 = normL1_lasso(Y, YC, L)
 		alpha1 = np.reshape(alpha1,(alpha1.shape[0]*alpha1.shape[1],1))
 		return alpha1
 
@@ -309,13 +369,12 @@ def clasifier(Ysparse, alpha1, responses, distType):
 	# Clasificador original del algoritmo
 	total = Ysparse.shape[0]
 	resto = float('inf')
+
 	for j in range(total):
 			
 		Yclass = Ysparse[j, :] # matriz sparse que representa la foto
 		
 		restoAux = distance(Yclass,alpha1,distType) # valor absoluto de la resta
-		
-		
 		# Encuentra la resta con menor error
 		if restoAux < resto:
 			correctPhoto = j
@@ -325,118 +384,85 @@ def clasifier(Ysparse, alpha1, responses, distType):
 	return correctPhoto, correctID
 
 
-def testing(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Ysparse, ii, jj, R, a, b, alpha, sub, sparseThreshold, useAlpha, distType, responses):
-	# testing algoritmo
-	cantPersonas = idxPhoto.shape[0]
-	idxTestPhoto = idxPhoto.shape[1]-1
-	correctPhoto = np.zeros((cantPersonas,2)) # para propositos del despliegue de las imagenes posterior
-	aciertos = 0
-
-	for i in range(cantPersonas):
-	# Ruta de la foto de testing
-		route = os.path.join(dataBasePath, idxPerson[i])
-		photos = os.listdir(route)
-		routePhoto = os.path.join(route, photos[idxPhoto[i,idxTestPhoto]])
-		
-		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
-		alpha1 = fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, useAlpha)
-		
-		# Inicialización variables de testing
-		resto = float('inf')
-		corrPhoto = cantPersonas+1
-		
-		# Binarización representaciones sparse
-		alpha1 = alpha1.transpose()
-		if  distType != 'euclidean' and distType != 'chiSquare':
-			alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold) # por umbral
-		# alphaBinary = alpha1 != 0 # distintas de cero
-		
-		
-		corrPhoto, corrID = clasifier(Ysparse, alpha1, responses, distType)
-		correctPhoto[i,0] = corrPhoto
-
-		
-		# Compara con vector de clasificación ideal
-		if int(corrID) == int(idxPerson[i]):
-			aciertos += 1
-			correctPhoto[i,1] = 1
-
-	return aciertos, correctPhoto
-
-def testingOld(dataBasePath, cantPersonas, idxPerson, idxPhoto, width, height, U, YC, Ysparse, ii, jj, R, a, b, alpha, sub, sparseThreshold, useAlpha, distType, responses):
-	# testing algoritmo
+def clasifier_v2(alpha1, sparseThreshold):
 	
-	idxTestPhoto = len(idxPhoto)-1
-	correctPhoto = np.zeros((cantPersonas,2)) # para propositos del despliegue de las imagenes posterior
+	alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold)
+	alpha1 = alpha1.flatten()
+	alphaTile = np.reshape(alpha1,(cantPersonas,Q*R*m))
+	suma = np.sum(alphaTile, axis=1)
+	ganador = np.argmax(suma)
+
+	return ganador
+
+
+def testing_v2(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Ysparse, ii, jj, L, a, b, alpha, sub, 
+	sparseThreshold, useAlpha):
+	# testing kNNSparse_v1.1
 	aciertos = 0
-
-	for i in range(cantPersonas):
-	# Ruta de la foto de testing
-		route = os.path.join(dataBasePath, idxPerson[i])
-		photos = os.listdir(route)
-		routePhoto = os.path.join(route, photos[idxPhoto[idxTestPhoto]])
-		
-		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
-		alpha1 = fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, useAlpha)
-		
-		# Inicialización variables de testing
-		resto = float('inf')
-		corrPhoto = cantPersonas+1
-		
-		# Binarización representaciones sparse
-		alpha1 = alpha1.transpose()
-		if  distType != 'euclidean' and distType != 'chiSquare':
-			alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold) # por umbral
-		# alphaBinary = alpha1 != 0 # distintas de cero
-		
-		
-		corrPhoto, corrID = clasifier(Ysparse, alpha1, responses, distType)
-		correctPhoto[i,0] = corrPhoto
-
-		
-		# Compara con vector de clasificación ideal
-		if int(corrID) == int(idxPerson[i]):
-			aciertos += 1
-			correctPhoto[i,1] = 1
-
-	return aciertos, correctPhoto
-
-def testing_NBNN(dataBasePath, idxPerson, idxPhoto, n_neighbors, width, height, U, YC, Ysparse, ii, jj, Q, R, a, b, alpha, sub, sparseThreshold, useAlpha, distType, responses):
-	# testing algoritmo
-	cantPersonas = idxPhoto.shape[0]
+	cantPersonas = len(idxPerson)
 	idxTestPhoto = idxPhoto.shape[1]-1
-	correctPhoto = np.zeros((cantPersonas,2)) # para propositos del despliegue de las imagenes posterior
-	aciertos = 0
-
+	
 	for i in range(cantPersonas):
-	# Ruta de la foto de testing
+		# Ruta de la foto de testing
 		route = os.path.join(dataBasePath, idxPerson[i])
 		photos = os.listdir(route)
 		routePhoto = os.path.join(route, photos[idxPhoto[i,idxTestPhoto]])
 		
 		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
-		alpha1 = fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, useAlpha)
+		alpha1 = asr.fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha)
 		
-		# Inicialización variables de testing
-		resto = float('inf')
-		corrPhoto = cantPersonas+1
-		
-		# Binarización representaciones sparse
-		alpha1 = alpha1.transpose()
-		if  distType != 'euclidean' and distType != 'chiSquare':
-			alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold) # por umbral
-		# alphaBinary = alpha1 != 0 # distintas de cero
-		
-		
-		corrID = NBNN(Ysparse, alpha1, responses, Q, R, distType, n_neighbors)
-		
-		# Compara con vector de clasificación ideal
-		if int(corrID) == int(idxPerson[i]):
+		ganador = clasifier_v2(alpha1, sparseThreshold)
+
+		if i == ganador:
 			aciertos += 1
-			
+
 	return aciertos
 
-def testing_Scikit(dataBasePath, idxPerson, idxPhoto, n_neighbors, width, height, U, YC, Ysparse, ii, jj, R, a, b, alpha, sub, sparseThreshold, useAlpha, distType, responses):
+
+def testing(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Ysparse, ii, jj, L, a, b, alpha, sub, 
+	sparseThreshold, useAlpha, distType, responses):
+	# testing algoritmo
+	cantPersonas = idxPhoto.shape[0]
+	idxTestPhoto = idxPhoto.shape[1]-1
+	correctPhoto = np.zeros((cantPersonas,2)) # para propositos del despliegue de las imagenes posterior
+	aciertos = 0
+
+	for i in range(cantPersonas):
+	# Ruta de la foto de testing
+		route = os.path.join(dataBasePath, idxPerson[i])
+		photos = os.listdir(route)
+		routePhoto = os.path.join(route, photos[idxPhoto[i,idxTestPhoto]])
+		
+		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
+		alpha1 = fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha)
+		
+		# Inicialización variables de testing
+		resto = float('inf')
+		corrPhoto = cantPersonas+1
+		
+		# Binarización representaciones sparse
+		alpha1 = alpha1.transpose()
+		if  distType != 'euclidean' and distType != 'chiSquare':
+			alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold) # por umbral
+		# alphaBinary = alpha1 != 0 # distintas de cero
+		
+		
+		corrPhoto, corrID = clasifier(Ysparse, alpha1, responses, distType)
+		correctPhoto[i,0] = corrPhoto
+
+		
+		# Compara con vector de clasificación ideal
+		if int(corrID) == int(idxPerson[i]):
+			aciertos += 1
+			correctPhoto[i,1] = 1
+
+	return aciertos, correctPhoto
+
+
+
+def testing_Scikit(dataBasePath, idxPerson, idxPhoto, n_neighbors, width, height, U, YC, Ysparse, ii, jj, L, a, b, alpha, sub, 
+	sparseThreshold, useAlpha, distType, responses):
+	# Testing co scikit y alteatoriedad irregular
 	cantPersonas = idxPhoto.shape[0]
 	idxTestPhoto = idxPhoto.shape[1]-1
 	correctPhoto = np.zeros((cantPersonas,2)) # para propositos del despliegue de las imagenes posterior
@@ -451,17 +477,19 @@ def testing_Scikit(dataBasePath, idxPerson, idxPhoto, n_neighbors, width, height
 		routePhoto = os.path.join(route, photos[idxPhoto[i,idxTestPhoto]])
 		
 		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
-		alpha1 = fingerprint(I, U, YC, ii, jj, R, a, b, alpha, sub, useAlpha)
+		alpha1 = fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha)
 		
 		alpha1 = alpha1.transpose()
 		# Binarización representaciones sparse
-		if  distType != 'euclidean' and distType != 'chiSquare':
-			alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold) # por umbral
-
-
+		
 		Ytest = miscUtils.concatenate(alpha1, Ytest, 'vertical')
 	
-	
+
+	if  distType != 'euclidean' and distType != 'chiSquare':
+			Ytest = (Ytest < -sparseThreshold) | (Ytest > sparseThreshold) # por umbral
+
+
+
 	for n in range(len(n_neighbors)):
 		neigh = KNeighborsClassifier(n_neighbors=n_neighbors[n],metric=distType) # inicializacion clasificador
 		neigh.fit(Ysparse, responses) # entrenador del algoritmo
@@ -507,4 +535,35 @@ def returnUnique(array):
 	idx = np.sort(idx)
 	return array[idx]	
 
+
+
+def generateBinarios(Q,R):
+
+	maximo = 2**(Q*R)
+
+	binarios = np.zeros([maximo,Q*R])
+
+	for i in range(1,maximo):
+		
+		bin = np.binary_repr(i,width=Q*R)
+		auxBin = np.array(list(bin))
+		auxBin = auxBin.astype(int)
+		binarios[i,:] = auxBin
+
+	return binarios
+
+
+def generateSparseMatrix(Q,R,cantPersonas):
+
+	binarios = generateBinarios(Q,R)
+	ancho = Q*R*cantPersonas
+	alto = 2**(Q*R)*cantPersonas
+
+	Ysparse = np.zeros((alto,ancho))
+
+	for i in range(cantPersonas):
+	
+		Ysparse[2**(Q*R)*i:2**(Q*R)*(i+1),i*Q*R:(i+1)*Q*R] = binarios
+
+	return Ysparse
 
