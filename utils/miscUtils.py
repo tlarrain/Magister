@@ -118,7 +118,7 @@ def totalPhotos(dataBasePath, idxSinglePerson):
 	return totalPhotos
 
 
-def randomSelectionOld(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas):
+def randomSelection_Old(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas):
 	# Selección de fotos y de personas aleatorio
 
 	idxPerson = getPersonIDs(dataBasePath)

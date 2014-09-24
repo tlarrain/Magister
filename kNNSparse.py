@@ -9,6 +9,7 @@ import numpy as np
 import utils.ASRUtils as asr
 import utils.miscUtils as miscUtils
 import utils.displayUtils as displayUtils
+import utils.magisterUtils as magisterUtils
 import os
 import time
 import cv2
@@ -30,7 +31,7 @@ R = 5					# Cluser Hijos
 L = 1 					# Cantidad de elementos en repr. sparse
 sub = 1					# Subsample
 sparseThreshold = 0 	# Umbral para binarizar la representación sparse
-distType = 'hamming'	# Tipo de distancia a utilizar. Puede ser 'hamming' o 'euclidean'
+distType = 'absDiff'	# Tipo de distancia a utilizar. Puede ser 'hamming' o 'euclidean'
 useAlpha = True			# Usar alpha en el vector de cada patch
 
 # Variables de display
@@ -39,7 +40,7 @@ dispWidth = 30			# Ancho de las imágenes desplegadas
 dispHeight = 30 		# Alto de las imágenes desplegadas
 
 # Variables kNN scikit
-useScikit = True					# Usar o no el clasificador de Scikit
+useScikit = False					# Usar o no el clasificador de Scikit
 n_neighbors = np.array([1]) 		# Cantidad de vecinos a utilizar
 
 
@@ -51,10 +52,8 @@ trainTimeAcumulado = 0
 
 # Datos de entrada del dataset
 dataBase = "ORL"
-dataBasePath = miscUtils.getDataBasePath(dataBase)
+dataBasePath, cantPhotosPerPerson = miscUtils.getDataBasePath(dataBase)
 
-bueno = False
-malo = False
 # Datos de entrada del Test
 cantIteraciones = 1
 cantPersonas = 20 		# Cantidad de personas para el experimento
@@ -65,7 +64,6 @@ cantPersonas = 20 		# Cantidad de personas para el experimento
 cantPhotosDict = 4
 cantPhotosSparse = 4 
 cantPhotos = cantPhotosSparse+1
-cantPhotosPerPerson = 10
 
 idxPerson = miscUtils.personSelectionByPhotoAmount(dataBasePath, cantPhotos)
 
@@ -89,7 +87,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 
 	# Seleccion aleatoria de individuos
 	# idxPerson, idxPhoto = miscUtils.randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas)
-	idxPerson, idxPhoto = miscUtils.randomSelectionOld(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas)
+	idxPerson, idxPhoto = miscUtils.randomSelection_Old(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas)
 	
 	# idxPerson = np.load("idxPersonMalo.npy")
 	# idxPhoto = np.load("idxPhotoMalo.npy")
@@ -99,11 +97,11 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	##################################
 
 	######### CREACION DICCIONARIO ##########
-	YC, ret = asr.generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict)
+	YC = asr.generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict)
 		
 
 	######### CREACION REPRESENTACIONES SPARSE ##########
-	Ysparse = asr.generateQueryBase(dataBasePath, idxPerson, idxPhoto, cantPhotosSparse, U, YC, iiSparse, jjSparse, L, width, height, a, b, alpha, 
+	Ysparse = magisterUtils.generateQueryBase(dataBasePath, idxPerson, idxPhoto, cantPhotosSparse, U, YC, iiSparse, jjSparse, L, width, height, a, b, alpha, 
 		sub, useAlpha, sparseThreshold, distType)
 
 
@@ -123,12 +121,12 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	beginTime = time.time()
 	
 	if useScikit:	
-		aciertos, correctPhoto = asr.testing_Scikit(dataBasePath, idxPerson, idxPhoto, n_neighbors, width, height, 
+		aciertos, correctPhoto = magisterUtils.testing_Scikit(dataBasePath, idxPerson, idxPhoto, n_neighbors, width, height, 
 			U, YC, Ysparse, iiSparse, jjSparse, L, a, b, alpha, sub, sparseThreshold, useAlpha, distType, responses)
 	
 		
 	else:			
-		aciertos, correctPhoto = asr.testing(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Ysparse, iiSparse, jjSparse, L, a, b, 
+		aciertos, correctPhoto = magisterUtils.testing(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Ysparse, iiSparse, jjSparse, L, a, b, 
 			alpha, sub, sparseThreshold, useAlpha, distType, responses)
 
 		

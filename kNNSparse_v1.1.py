@@ -9,6 +9,7 @@ import numpy as np
 import utils.ASRUtils as asr
 import utils.miscUtils as miscUtils
 import utils.displayUtils as displayUtils
+import utils.magisterUtils as magisterUtils
 import os
 import time
 import cv2
@@ -22,9 +23,9 @@ width = 100				# Ancho del resize de la imagen
 a = 18					# Alto del patch
 b = 18					# Ancho del patch
 alpha = 0.5	 			# Peso del centro
-Q = 25					# Cluster Padres
-R = 20					# Cluser Hijos
-L = 1 					# Cantidad de elementos en repr. sparse
+Q = 20					# Cluster Padres
+R = 10					# Cluser Hijos
+L = 1					# Cantidad de elementos en repr. sparse
 sub = 1					# Subsample
 sparseThreshold = 0 	# Umbral para binarizar la representación sparse
 useAlpha = True			# Usar alpha en el vector de cada patch
@@ -35,7 +36,7 @@ dispWidth = 30			# Ancho de las imágenes desplegadas
 dispHeight = 30 		# Alto de las imágenes desplegadas
 
 
-# Inicializacion variables controlNombre 	Dirección	Costo/día	Total
+# Inicializacion variables
 porcAcumulado = 0
 testTimeAcumulado = 0
 trainTimeAcumulado = 0
@@ -47,10 +48,10 @@ dataBasePath, cantPhotosPerPerson = miscUtils.getDataBasePath(dataBase)
 
 # Datos de entrada del Test
 cantIteraciones = 100
-cantPersonas = 20 		# Cantidad de personas para el experimento
+cantPersonas = 40 		# Cantidad de personas para el experimento
 
 
-cantPhotosDict = 4
+cantPhotosDict = 9
 cantPhotos = cantPhotosDict+1
 
 idxTestPhoto = cantPhotosDict 
@@ -66,6 +67,7 @@ iiDict, jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de
 # iiDict, jjDict = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
 
 iiSparse, jjSparse = asr.grilla_v2(height, width, a, b, m2) # Grilla de m2 cantidad de parches
+# iiSparse, jjSparse = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
 
 for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	
@@ -76,7 +78,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 
 	# Seleccion aleatoria de individuos
 	# idxPerson, idxPhoto = miscUtils.randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas)	
-	idxPerson, idxPhoto = miscUtils.randomSelectionOld(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas)
+	idxPerson, idxPhoto = miscUtils.randomSelection_Old(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas)
 	
 
 	##################################
@@ -99,13 +101,18 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	print "Testing..."
 	beginTime = time.time()
 	
-	aciertos = asr.testing_v2(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Ysparse, iiSparse, jjSparse, L, a, b, 
+	aciertos = magisterUtils.testing_v2(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, iiSparse, jjSparse, L, a, b, 
 		alpha, sub, sparseThreshold, useAlpha)
+
+	# aciertos = magisterUtils.testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, iiSparse, jjSparse, L, a, b, 
+	# 	alpha, sub, sparseThreshold, useAlpha)
 	
+
 	# Control de tiempo
 	testTime = time.time() - beginTime
 	testTimeAcumulado += testTime/cantPersonas	
 	
+
 	# Resultados	
 	print "Porcentaje Aciertos: " , float(aciertos)/cantPersonas*100, "%"	
 	porcAcumulado += float(aciertos)/cantPersonas*100
@@ -144,10 +151,10 @@ print miscUtils.fixedLengthString(title, "R: " + str(R))
 print miscUtils.fixedLengthString(title, "sub: " + str(sub))
 print miscUtils.fixedLengthString(title, "sparseThreshold: " + str(sparseThreshold)) + "\n"
 
-print "Tiempo de entrenamiento promedio: ", trainTimeAcumulado/cantIteraciones, " segundos/persona"
+print "Tiempo de entrenamiento promedio: ", trainTimeAcumulado/cantIteraciones, " segundos"
 print "Tiempo de testing promedio: ", testTimeAcumulado/cantIteraciones, " segundos/persona"
 
 print "Porcentaje acumulado: ", porcAcumulado/cantIteraciones, "%\n"
 
 
-print "Tiempo total del test: ", (testTimeAcumulado + trainTimeAcumulado)/60, " minutos"
+print "Tiempo total del test: ", (testTimeAcumulado*cantPersonas + trainTimeAcumulado)/60, " minutos"
