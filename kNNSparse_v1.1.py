@@ -25,12 +25,13 @@ a = 18					# Alto del patch
 b = 18					# Ancho del patch
 alpha = 0.5	 			# Peso del centro
 Q = 20					# Cluster Padres
-R = 10					# Cluser Hijos
+R = 20					# Cluser Hijos
 L = 6					# Cantidad de elementos en repr. sparse
 sub = 1					# Subsample
 sparseThreshold = 0 	# Umbral para binarizar la representación sparse
-SCIThreshold = 0.25		# Umbral de seleccion de patches
+SCIThreshold = 0		# Umbral de seleccion de patches
 useAlpha = True			# Usar alpha en el vector de cada patch
+
 
 # Variables de display
 display = False			# Desplegar resultados
@@ -45,15 +46,15 @@ trainTimeAcumulado = 0
 
 
 # Datos de entrada del dataset
-dataBase = "ARx"
+dataBase = "AR"
 dataBasePath, cantPhotosPerPerson = dataBaseUtils.getDataBasePath(dataBase)
 
 # Datos de entrada del Test
 cantIteraciones = 100
-cantPersonas = 20 		# Cantidad de personas para el experimento
+cantPersonas = 40 		# Cantidad de personas para el experimento
 
 
-cantPhotosDict = 4
+cantPhotosDict = 9
 cantPhotos = cantPhotosDict+1
 
 idxTestPhoto = cantPhotosDict 
@@ -65,11 +66,11 @@ if len(idxPerson) < cantPersonas:
 
 U = asr.LUT(height,width,a,b) # Look Up Table
 
-# iiDict, jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de parches
-iiDict, jjDict = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
+iiDict, jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de parches
+# iiDict, jjDict = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
 
-# iiSparse, jjSparse = asr.grilla_v2(height, width, a, b, m2) # Grilla de m2 cantidad de parches
-iiSparse, jjSparse = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
+iiSparse, jjSparse = asr.grilla_v2(height, width, a, b, m2) # Grilla de m2 cantidad de parches
+# iiSparse, jjSparse = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
 
 for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	
