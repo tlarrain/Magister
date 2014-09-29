@@ -43,9 +43,14 @@ def fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha=True, tipo='omp'
 	width = I.shape[1]
 	Y = asr.patches(I, ii, jj, U, a, b, alpha, sub, useAlpha)
 	
+	# np.save("YC.npy", YC)
+	# np.save("patches.npy", Y)
+
+	# io.savemat("/Users/Tomas/Developer/Matlab/Magister/variables.mat",{'YC':YC, 'patches':Y})
+
 	if tipo == 'omp':
 		alpha1 = asr.normL1_omp(Y, YC, L)
-		alpha1 = np.reshape(alpha1, (alpha1.shape[0]*alpha1.shape[1], 1))
+		# alpha1 = np.reshape(alpha1, (alpha1.shape[0]*alpha1.shape[1], 1))
 		# alpha1 = np.reshape(alpha1, (alpha1.shape[0]*alpha1.shape[1], 1), order='F')
 		return alpha1
 
@@ -115,20 +120,32 @@ def clasifier_v2(alpha1, Q, R, m, sparseThreshold, cantPersonas):
 	return ganador
 
 
-def clasifier_v3(alpha1, Q, R, m, sparseThreshold, cantPersonas):
+def clasifier_v3(alpha1, Q, R, m, L, SCIThreshold, sparseThreshold, cantPersonas):
 	
-	alpha1 = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold)
-	alpha1 = alpha1.flatten()
-	alphaR = np.reshape(alpha1,(m, Q*R*cantPersonas))
-	maximo = 0
+	# alphaBinary = (alpha1 < -sparseThreshold) | (alpha1 > sparseThreshold)
+	# alpha1 = alpha1.flatten()
+	# alphaR = np.reshape(alpha1,(m, Q*R*cantPersonas))
+	
+	# Extrae solamente el coeficiente sparse mas alto de cada fila
+	idx = np.argmax(alpha1,axis=1)
+	alphaMax = np.zeros(alpha1.shape)
+	for i in range(alphaMax.shape[0]):
+		alphaMax[i,idx[i]] = 1
 
+	valid = validMatrix(alpha1, Q, R, cantPersonas, L, SCIThreshold)
+	alphaFinal = alphaMax*valid
+	# print (np.nonzero(alphaFinal != 0))[0].shape # muestra la cantidad de patches que pasaron la prueba
+	
+	maximo = 0
 	for j in range(cantPersonas):
-		alphaAux = alphaR[:,j*Q*R:(j+1)*Q*R]
+		
+		alphaAux = alphaFinal[:,j*Q*R:(j+1)*Q*R]
 		suma = alphaAux.sum()
 		
 		if suma > maximo:
 			maximo = suma
 			correcto = j
+
 
 	return correcto
 
@@ -202,12 +219,12 @@ def testing_v2(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m,
 
 
 def testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m, ii, jj, L, a, b, alpha, sub, 
-	sparseThreshold, useAlpha):
+	sparseThreshold, SCIThreshold, useAlpha):
 	# testing kNNSparse_v1.1
 	aciertos = 0
 	cantPersonas = len(idxPerson)
 	idxTestPhoto = idxPhoto.shape[1]-1
-	Ytest = np.array([])
+	# Ytest = np.array([])
 	for i in range(cantPersonas):
 		# Ruta de la foto de testing
 		route = os.path.join(dataBasePath, idxPerson[i])
@@ -217,9 +234,9 @@ def testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m,
 		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
 		alpha1 = fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha)
 		
-		Ytest = miscUtils.concatenate(alpha1,Ytest,'horizontal')
+		# Ytest = miscUtils.concatenate(alpha1,Ytest,'horizontal')
 		alpha1 = alpha1.transpose()
-		ganador = clasifier_v3(alpha1, Q, R, m, sparseThreshold, cantPersonas)
+		ganador = clasifier_v3(alpha1, Q, R, m, L, SCIThreshold, sparseThreshold, cantPersonas)
 
 		if i == ganador:
 			aciertos += 1
@@ -271,4 +288,24 @@ def testing_Scikit(dataBasePath, idxPerson, idxPhoto, n_neighbors, width, height
 				aciertos[n] += 1
 				correctPhoto[i,1] = 1
 
-	return aciertos, correctPhoto		
+	return aciertos, correctPhoto
+
+
+def validMatrix(alphaR, Q, R, cantPersonas, L, SCIThreshold):
+	cantSparse = alphaR.shape[0]
+	valid = np.zeros(alphaR.shape)
+	
+	for i in range(cantSparse):
+		alpha = alphaR[i,:]
+		sci = asr.SCI(alpha, Q, R, cantPersonas, L)
+		
+		if sci > SCIThreshold:
+			valid[i,:] = 1
+
+	return valid
+
+
+
+
+
+

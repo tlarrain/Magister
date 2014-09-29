@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """"
 Script que guarda en una estructura de carpetas las bases de datos que no los son
 Tomas Larrain A.
@@ -11,25 +12,25 @@ import os
 
 
 
-root = "/Users/Tomas/Developer/data/AR_old"
-dst = "/Users/Tomas/Developer/data/AR"
+# root = "/Users/Tomas/Dropbox/Camera Uploads"
+# dst = "/Users/Tomas/Developer/data/faces/FWM"
 
-fotoNames = os.listdir(root)
+if not os.path.exists(dst):
+    os.makedirs(dst)
 
-cont = 0
-for i in range(100):
-	if i<9:
-		directory = os.path.join(dst,str(0)+str(i+1))
-	else:
-		directory = os.path.join(dst,str(i+1))
-	if not os.path.exists(directory):
-	    os.makedirs(directory)
-	for j in range(26):
-		src = os.path.join(root,fotoNames[cont])
-		extension = os.path.splitext(src)[1]
-		
-		if extension == '.png':
-			shutil.copyfile(src, os.path.join(directory,fotoNames[cont]))
-		else:
-			print extension	
-		cont += 1
+photoNames = os.listdir(root)
+
+photoEx = photoNames[1]
+photo = photoEx.split('_')
+
+for i in range(1,len(photoNames)):
+# 	photo = photoNames[i]
+# 	actPersonID = photo.split('_')[1]
+# 	directory = os.path.join(dst,actPersonID)
+# 	print directory
+# 	if not os.path.exists(directory): # crea la carpeta del ID de la persona si no existía anteriormente
+# 		os.makedirs(directory)
+
+# 	rootFile = os.path.join(root, photo)
+# 	dstFile = os.path.join(directory, photo)
+# 	shutil.copy(rootFile, dstFile)	

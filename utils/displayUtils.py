@@ -37,6 +37,50 @@ def displayGrilla(I,ii,jj,a,b,m):
 
 	return np.uint8(I)
 
+
+
+def generateAllPhotos(cantPersonas, cantPhotosDict, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):
+
+	displayImage = np.array([])
+	blackSpace = np.zeros((dispHeight,20,3)) # espacio para separar fotos del diccionario de base de datos
+
+	for i in range(cantPersonas):
+		fila = np.array([])
+		route = os.path.join(rootPath, idxPerson[i])
+		photos = os.listdir(route)
+
+		for d in range(cantPhotosDict):
+			routePhoto = os.path.join(route, photos[idxPhoto[i,d]]) # ruta de la foto j
+			I = miscUtils.readScaleImageColor(routePhoto, dispWidth, dispHeight) # lectura de la imagen
+			fila = miscUtils.concatenate(I, fila, 'horizontal')
+
+		fila = miscUtils.concatenate(blackSpace, fila, 'horizontal')
+		routePhoto = os.path.join(route, photos[idxPhoto[i,cantPhotosDict]]) # ruta de la foto de test
+		I = miscUtils.readScaleImageColor(routePhoto, dispWidth, dispHeight) # lectura de la imagen de test
+		fila = miscUtils.concatenate(I, fila, 'horizontal')		
+		displayImage = miscUtils.concatenate(fila, displayImage, 'vertical')
+
+
+	return np.uint8(displayImage)
+
+def displayResults(results, allPhotos):
+	# Función que despliega las imagenes en una sola ventana
+	displayImage = np.array([])
+	blackSpace = np.zeros((results.shape[0],20,3))
+	blackSpace = np.uint8(blackSpace)
+	displayImage = miscUtils.concatenate(blackSpace, allPhotos, 'horizontal')
+	displayImage = miscUtils.concatenate(results,displayImage, 'horizontal')
+
+	cv2.namedWindow("Resultados finales")
+	cv2.imshow("Resultados finales", displayImage)
+	cv2.waitKey()
+
+
+#######################################
+
+
+
+
 def generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):	
 	# Desplega la imagen query y aquella a la que encontró más parecida. Para continuar de presiona cualquier tecla
 	cantPersonas = correctPhoto.shape[0]
@@ -77,48 +121,3 @@ def generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, id
 
 	return np.uint8(displayImage)
 	
-
-def generateAllPhotos(cantPersonas, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):
-
-	displayImage = np.array([])
-	blackSpace = np.zeros((dispHeight,20,3)) # espacio para separar fotos del diccionario de base de datos
-
-	for i in range(cantPersonas):
-		fila = np.array([])
-		route = os.path.join(rootPath, idxPerson[i])
-		photos = os.listdir(route)
-
-		for d in range(cantPhotosDict):
-			routePhoto = os.path.join(route, photos[idxPhoto[i,d]]) # ruta de la foto j
-			I = miscUtils.readScaleImageColor(routePhoto, dispWidth, dispHeight) # lectura de la imagen
-			fila = miscUtils.concatenate(I, fila, 'horizontal')
-
-		fila = miscUtils.concatenate(blackSpace, fila, 'horizontal')
-
-		for s in range(cantPhotosSparse):
-			
-			# idx = s+cantPhotosDict
-			idx = s
-			routePhoto = os.path.join(route, photos[idxPhoto[i,idx]])
-			I = miscUtils.readScaleImageColor(routePhoto, dispWidth, dispHeight)
-			fila = miscUtils.concatenate(I, fila, 'horizontal')
-
-		displayImage = miscUtils.concatenate(fila, displayImage, 'vertical')
-
-
-	return np.uint8(displayImage)
-
-def displayResults(results, allPhotos):
-	# Función que despliega las imagenes en una sola ventana
-	displayImage = np.array([])
-	blackSpace = np.zeros((results.shape[0],20,3))
-	blackSpace = np.uint8(blackSpace)
-	displayImage = miscUtils.concatenate(blackSpace, allPhotos, 'horizontal')
-	displayImage = miscUtils.concatenate(results,displayImage, 'horizontal')
-
-	cv2.namedWindow("Resultados finales")
-	cv2.imshow("Resultados finales", displayImage)
-	cv2.waitKey()
-
-
-

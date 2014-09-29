@@ -222,7 +222,7 @@ def clasification(A, y, alpha1, R, cantPersonas):
 
 
 def normL1_lasso(x, A, R):
-	# minimizacion L1
+	# minimizacion L1-Lasso
 	X = np.asfortranarray(np.matrix(x).transpose())
 	D = np.asfortranarray(A.transpose())
 	X = np.float32(X)
@@ -239,7 +239,7 @@ def normL1_lasso(x, A, R):
 	return alpha
 
 def normL1_omp(x, A, R):
-	# minimizacion L1
+	# minimizacion L1-OMP
 	X = np.asfortranarray(np.matrix(x).transpose())
 	D = np.asfortranarray(A.transpose())
 	X = np.float64(X)
@@ -299,9 +299,21 @@ def modelling(Y, Q, R):
 	return YC,YP
 
 
-def returnUnique(array):
-	arrayUnique, idx = np.unique(array,return_index = True)		
-	idx = np.sort(idx)
-	return array[idx]	
+def SCI(alpha, Q, R, cantSujetos, L):
+	# coeficiente SCI
+	maxSum = 0
+
+	for i in range(cantSujetos): 
+		alphaClass = alpha[i*Q*R:(i+1)*Q*R]
+		auxSum = alphaClass != 0
+		auxSum = auxSum.sum()
+
+		if auxSum > maxSum:
+			maxSum = auxSum
+	    
+	SCI = (float(maxSum)/L*cantSujetos - 1)/(cantSujetos-1)
+	# print SCI
+	return SCI
+
 
 

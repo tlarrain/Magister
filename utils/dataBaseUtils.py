@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Miscelaneous Utils
+Data Base Utils
 Tomás Larrain A.
 4 de agosto de 2014
 """
 import cv2
 import os
 import numpy as np
+import utils.miscUtils as miscUtils
 
 def getFacePath():
 	# Path donde estan todas las bases de datos
@@ -18,7 +19,7 @@ def getDataBasePath(dataBase):
 	
 	facePath = getFacePath()
 
-	if dataBase == 'AR':
+	if dataBase == 'AR' or dataBase == 'ARx':
 		return os.path.join(facePath,"AR/CROP/"), 26
 
 	if dataBase == 'ORL':
@@ -32,6 +33,13 @@ def getDataBasePath(dataBase):
 
 	if dataBase == 'LFW':
 		return os.path.join(facePath, "LFW"), 0
+
+	if dataBase == 'Yale':
+		return os.path.join(facePath, "Yale"), 59
+
+	if dataBase == 'FWM':
+		return os.path.join(facePath, "FWM"), 0
+
 	else:
 		return "No data base with " + str(dataBase) + " name in the face path"
 
@@ -93,7 +101,7 @@ def randomPhotoSelection(dataBasePath, idxPerson, cantPhotos):
 
 	for i in range(len(idxPerson)):
 		photos = totalPhotos(dataBasePath, idxPerson[i])
-		idxPhoto = concatenate(np.random.permutation(photos)[:cantPhotos],idxPhoto,'vertical')
+		idxPhoto = miscUtils.concatenate(np.random.permutation(photos)[:cantPhotos],idxPhoto,'vertical')
 	
 	return idxPhoto
 
@@ -106,7 +114,7 @@ def randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas):
 
 	for i in range(len(idxPerson)):
 		photos = totalPhotos(dataBasePath, idxPerson[i])
-		idxPhoto = concatenate(np.random.permutation(photos)[:cantPhotos],idxPhoto,'vertical')
+		idxPhoto = miscUtils.concatenate(np.random.permutation(photos)[:cantPhotos],idxPhoto,'vertical')
 	
 	return idxPerson, idxPhoto
 
@@ -131,65 +139,31 @@ def randomSelection_Old(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPerso
 
 	return idxPerson, idxPhoto
 
+def randomSelectionPhoto_ARx(cantPhotos, cantPersonas, tipo='old'):
+	# Seleccion de fotos para ARx
+	trainSet = np.array([1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17, 18, 19, 20]) - 1 
+	testSet = np.array([8, 9, 10, 11, 12, 13, 21, 22, 23, 24, 25, 26]) - 1
+	idxPhoto = np.array([])
 
-def responseVector(cantPersonas, idxPerson, cantPhotosSparse):
-	# Vector de representación ideal  con cantPersonas personas que tienen cantPhotosSparse fotos
-	responses = np.zeros(0)
-	for i in range(cantPersonas): 
-		responses = np.append(responses,float(idxPerson[i])*np.ones(cantPhotosSparse))
-	
-	return responses
-
-
-def concatenate(auxMatrix, acumMatrix, direction):
+	if tipo == 'old':
 		
-	if len(acumMatrix) == 0:
-		acumMatrix = auxMatrix.copy()
-	
-	elif direction == 'vertical':
-		acumMatrix = np.vstack((acumMatrix,auxMatrix))
+		idxPhotoTrain = np.random.permutation(trainSet)[:cantPhotos-1]
+		idxPhotoTest = np.random.choice(testSet, 1)[0]
 
-	elif direction == 'horizontal':
-		acumMatrix = np.hstack((acumMatrix,auxMatrix))	
-	
-	return acumMatrix
+		idxPhoto = np.append(idxPhotoTrain, idxPhotoTest)
+		idxPhoto = np.tile(idxPhoto,(cantPersonas, 1))
 
+		return idxPhoto
 
-def readScaleImageBW(route, width, height):
-	# Lee la imagen de route, la pasa a B&N y la escala segun width y height
-	It = cv2.imread(route)
-	if It is not None:	 
-		It = cv2.cvtColor(It,cv2.COLOR_BGR2GRAY)
-		It = np.float32(It)
-		It = cv2.resize(It,(width,height))	
-		return It
-	else:
-		return np.zeros(0)
+	if tipo == 'new':
+
+		for i in range(cantPersonas):
+			idxPhotoTrain = np.random.permutation(trainSet)[:cantPhotos-1]
+			idxPhotoTest = np.random.choice(testSet, 1)[0]
+			idxPhotoAux = np.append(idxPhotoTrain, idxPhotoTest)
+			idxPhoto = miscUtils.concatenate(idxPhotoAux, idxPhoto, 'vertical')
+
+		return idxPhoto
 
 
-def readScaleImageColor(route, width, height):
-	# Lee la imagen de route, la pasa a B&N y la escala segun width y height
-	It = cv2.imread(route)
-	if It is not None:	 
-		It = np.float32(It)
-		It = cv2.resize(It,(width,height))	
-		return It
-	else:
-		return np.zeros(0)
-
-
-def wiener(I):
-	# Filtro de Wiener para imágenes
-	uni = I/255.0
-	W = signal.wiener(uni, mysize=(3,3))
-	W = np.round(255*W)
-	W = np.uint8(W)
-	return W
-
-
-def fixedLengthString(longString, shortString):
-	diff = len(longString) - len(shortString)
-	outString = ' '*diff
-	outString += shortString
-	return outString	
 

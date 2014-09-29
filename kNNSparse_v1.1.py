@@ -10,6 +10,7 @@ import utils.ASRUtils as asr
 import utils.miscUtils as miscUtils
 import utils.displayUtils as displayUtils
 import utils.magisterUtils as magisterUtils
+import utils.dataBaseUtils as dataBaseUtils
 import os
 import time
 import cv2
@@ -25,9 +26,10 @@ b = 18					# Ancho del patch
 alpha = 0.5	 			# Peso del centro
 Q = 20					# Cluster Padres
 R = 10					# Cluser Hijos
-L = 1					# Cantidad de elementos en repr. sparse
+L = 6					# Cantidad de elementos en repr. sparse
 sub = 1					# Subsample
 sparseThreshold = 0 	# Umbral para binarizar la representación sparse
+SCIThreshold = 0.25		# Umbral de seleccion de patches
 useAlpha = True			# Usar alpha en el vector de cada patch
 
 # Variables de display
@@ -43,19 +45,19 @@ trainTimeAcumulado = 0
 
 
 # Datos de entrada del dataset
-dataBase = "AR"
-dataBasePath, cantPhotosPerPerson = miscUtils.getDataBasePath(dataBase)
+dataBase = "ARx"
+dataBasePath, cantPhotosPerPerson = dataBaseUtils.getDataBasePath(dataBase)
 
 # Datos de entrada del Test
 cantIteraciones = 100
-cantPersonas = 40 		# Cantidad de personas para el experimento
+cantPersonas = 20 		# Cantidad de personas para el experimento
 
 
-cantPhotosDict = 9
+cantPhotosDict = 4
 cantPhotos = cantPhotosDict+1
 
 idxTestPhoto = cantPhotosDict 
-idxPerson = miscUtils.personSelectionByPhotoAmount(dataBasePath, cantPhotos)
+idxPerson = dataBaseUtils.personSelectionByPhotoAmount(dataBasePath, cantPhotos)
 
 if len(idxPerson) < cantPersonas:
 	print "no hay suficiente cantidad de personas para realizar el experimento"
@@ -63,11 +65,11 @@ if len(idxPerson) < cantPersonas:
 
 U = asr.LUT(height,width,a,b) # Look Up Table
 
-iiDict, jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de parches
-# iiDict, jjDict = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
+# iiDict, jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de parches
+iiDict, jjDict = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
 
-iiSparse, jjSparse = asr.grilla_v2(height, width, a, b, m2) # Grilla de m2 cantidad de parches
-# iiSparse, jjSparse = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
+# iiSparse, jjSparse = asr.grilla_v2(height, width, a, b, m2) # Grilla de m2 cantidad de parches
+iiSparse, jjSparse = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
 
 for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	
@@ -77,9 +79,12 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	
 
 	# Seleccion aleatoria de individuos
-	# idxPerson, idxPhoto = miscUtils.randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas)	
-	idxPerson, idxPhoto = miscUtils.randomSelection_Old(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas)
+	# idxPerson, idxPhoto = dataBaseUtils.randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas)	
+	idxPerson, idxPhoto = dataBaseUtils.randomSelection_Old(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas)
 	
+	if dataBase == "ARx":
+		idxPhoto = dataBaseUtils.randomSelectionPhoto_ARx(cantPhotos, cantPersonas)	
+
 
 	##################################
 	######### ENTRENAMIENTO ##########
@@ -89,6 +94,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	######### CREACION DICCIONARIO ##########
 	YC = asr.generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict)
 	
+
 	# Inicialización variables de control
 	trainTime = time.time() - beginTime
 	trainTimeAcumulado += trainTime
@@ -101,11 +107,11 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	print "Testing..."
 	beginTime = time.time()
 	
-	aciertos = magisterUtils.testing_v2(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, iiSparse, jjSparse, L, a, b, 
-		alpha, sub, sparseThreshold, useAlpha)
-
-	# aciertos = magisterUtils.testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, iiSparse, jjSparse, L, a, b, 
+	# aciertos = magisterUtils.testing_v2(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, iiSparse, jjSparse, L, a, b, 
 	# 	alpha, sub, sparseThreshold, useAlpha)
+
+	aciertos = magisterUtils.testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, iiSparse, jjSparse, L, a, b, 
+		alpha, sub, sparseThreshold, SCIThreshold, useAlpha)
 	
 
 	# Control de tiempo
@@ -119,13 +125,16 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	print "Porcentaje Acumlado: ", float(porcAcumulado)/(it+1), "%\n"	
 
 	if display:
-		results = displayUtils.generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, 
+		# results = displayUtils.generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, 
+		# 	dataBasePath, dispWidth, dispHeight)
+		
+		allPhotos = displayUtils.generateAllPhotos(cantPersonas, cantPhotosDict, idxPhoto, idxPerson, 
 			dataBasePath, dispWidth, dispHeight)
 		
-		allPhotos = displayUtils.generateAllPhotos(cantPersonas, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, 
-			dataBasePath, dispWidth, dispHeight)
-		
-		displayUtils.displayResults(results, allPhotos)
+		cv2.namedWindow("experimento")
+		cv2.imshow("experimento", allPhotos)
+		cv2.waitKey()
+		# displayUtils.displayResults(results, allPhotos)
 
 
 
@@ -148,9 +157,10 @@ print miscUtils.fixedLengthString(title, "b: " + str(b))
 print miscUtils.fixedLengthString(title, "alpha: " + str(alpha))
 print miscUtils.fixedLengthString(title, "Q: " + str(Q))
 print miscUtils.fixedLengthString(title, "R: " + str(R))
+print miscUtils.fixedLengthString(title, "L: " + str(L))
 print miscUtils.fixedLengthString(title, "sub: " + str(sub))
-print miscUtils.fixedLengthString(title, "sparseThreshold: " + str(sparseThreshold)) + "\n"
-
+print miscUtils.fixedLengthString(title, "sparseThreshold: " + str(sparseThreshold))
+print miscUtils.fixedLengthString(title, "SCIThreshold: " + str(SCIThreshold)) + "\n"
 print "Tiempo de entrenamiento promedio: ", trainTimeAcumulado/cantIteraciones, " segundos"
 print "Tiempo de testing promedio: ", testTimeAcumulado/cantIteraciones, " segundos/persona"
 
