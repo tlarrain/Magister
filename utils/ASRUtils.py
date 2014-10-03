@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 import spams
 import miscUtils
-from scipy import signal
+import imageUtils
 from scipy.spatial import distance as dist
 from sklearn.neighbors import KNeighborsClassifier
 from scipy import io
@@ -112,7 +112,7 @@ def grilla_v2(h, w, a, b, m):
 	return ii,jj	
 
 
-def generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict):
+def generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict, tanTriggs):
 	# Genera diccionario con parches de fotos
 	cantPersonas = len(idxPerson)
 	YC = np.array([])
@@ -128,7 +128,7 @@ def generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, 
 		for j in range(cantPhotosDict):
 			
 			routePhoto = os.path.join(route, photos[idxPhoto[i,j]]) # ruta de la foto j
-			I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagen
+			I = imageUtils.readScaleImage(routePhoto, width, height, tanTriggs=tanTriggs) # lectura de la imagen
 					
 			Yaux = patches(I, iiDict, jjDict, U, a, b, alpha, sub, useAlpha) # extracción de parches
 		
@@ -225,7 +225,7 @@ def normL1_lasso(x, A, R):
 	# minimizacion L1-Lasso
 	X = np.asfortranarray(np.matrix(x).transpose())
 	D = np.asfortranarray(A.transpose())
-	X = np.float32(X)
+	X = np.float64(X)
 	numThreads = -1
 	eps = 0.0
 	param = {
@@ -240,10 +240,12 @@ def normL1_lasso(x, A, R):
 
 def normL1_omp(x, A, R):
 	# minimizacion L1-OMP
+	x = np.float64(x)
+	A = np.float64(A)
+
 	X = np.asfortranarray(np.matrix(x).transpose())
 	D = np.asfortranarray(A.transpose())
-	X = np.float64(X)
-	D = np.float64(D)
+	
 	numThreads = -1
 	eps = 0.0
 	alpha = spams.omp(X, D = D, L = R, eps = eps, return_reg_path = False, numThreads = numThreads)
@@ -312,7 +314,6 @@ def SCI(alpha, Q, R, cantSujetos, L):
 			maxSum = auxSum
 	    
 	SCI = (float(maxSum)/L*cantSujetos - 1)/(cantSujetos-1)
-	# print SCI
 	return SCI
 
 

@@ -29,8 +29,10 @@ R = 10					# Cluser Hijos
 L = 6					# Cantidad de elementos en repr. sparse
 sub = 1					# Subsample
 sparseThreshold = 0 	# Umbral para binarizar la representación sparse
-SCIThreshold = 0.25		# Umbral de seleccion de patches
+SCIThreshold = 0.2		# Umbral de seleccion de patches
 useAlpha = True			# Usar alpha en el vector de cada patch
+tanTriggs = False		# Utilizar normalizacion de Tan-Triggs
+
 
 # Variables de display
 display = False			# Desplegar resultados
@@ -45,12 +47,12 @@ trainTimeAcumulado = 0
 
 
 # Datos de entrada del dataset
-dataBase = "ARx"
+dataBase = "Yale"
 dataBasePath, cantPhotosPerPerson = dataBaseUtils.getDataBasePath(dataBase)
 
 # Datos de entrada del Test
 cantIteraciones = 100
-cantPersonas = 20 		# Cantidad de personas para el experimento
+cantPersonas = 20		# Cantidad de personas para el experimento
 
 
 cantPhotosDict = 4
@@ -65,23 +67,24 @@ if len(idxPerson) < cantPersonas:
 
 U = asr.LUT(height,width,a,b) # Look Up Table
 
-# iiDict, jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de parches
-iiDict, jjDict = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
+iiDict, jjDict = asr.grilla_v2(height, width, a, b, m) # Grilla de m cantidad de parches
+# iiDict, jjDict = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
 
-# iiSparse, jjSparse = asr.grilla_v2(height, width, a, b, m2) # Grilla de m2 cantidad de parches
-iiSparse, jjSparse = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
+iiSparse, jjSparse = asr.grilla_v2(height, width, a, b, m2) # Grilla de m2 cantidad de parches
+# iiSparse, jjSparse = asr.randomCorners(height, width, a, b, m) # esquinas aleatorias
 
 for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	
 	print "Iteracion ", it+1, " de ", cantIteraciones
 	print "Entrenando..."
 	
-	
-
 	# Seleccion aleatoria de individuos
-	# idxPerson, idxPhoto = dataBaseUtils.randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas)	
-	idxPerson, idxPhoto = dataBaseUtils.randomSelection_Old(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas)
-	
+	if cantPhotosPerPerson != 0:
+		idxPerson, idxPhoto = dataBaseUtils.randomSelection_Old(dataBasePath, cantPhotosPerPerson, cantPhotos, cantPersonas)
+	else:
+		idxPerson, idxPhoto = dataBaseUtils.randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas)
+
+
 	if dataBase == "ARx":
 		idxPhoto = dataBaseUtils.randomSelectionPhoto_ARx(cantPhotos, cantPersonas)	
 
@@ -92,7 +95,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 
 	beginTime = time.time()
 	######### CREACION DICCIONARIO ##########
-	YC = asr.generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict)
+	YC = asr.generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict, tanTriggs)
 	
 
 	# Inicialización variables de control
@@ -111,7 +114,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	# 	alpha, sub, sparseThreshold, useAlpha)
 
 	aciertos = magisterUtils.testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, iiSparse, jjSparse, L, a, b, 
-		alpha, sub, sparseThreshold, SCIThreshold, useAlpha)
+		alpha, sub, sparseThreshold, SCIThreshold, useAlpha, tanTriggs)
 	
 
 	# Control de tiempo
@@ -138,33 +141,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 
 
 
-	
-# RESULTADOS FINALES
-print "Experimento finalizado"
-print "Base de Datos: ", dataBase
-print "Se utilizó alpha: ", useAlpha
-print "Cantidad de personas: ", cantPersonas
-print "Fotos para diccionario: ", cantPhotosDict, "\n"
-
-title = "Variables utilizadas:"
-print title
-print miscUtils.fixedLengthString(title, "m: " + str(m))
-print miscUtils.fixedLengthString(title, "m2: " + str(m2))
-print miscUtils.fixedLengthString(title, "height: " + str(height))
-print miscUtils.fixedLengthString(title, "width: " +str(width))
-print miscUtils.fixedLengthString(title, "a: " + str(a))
-print miscUtils.fixedLengthString(title, "b: " + str(b))
-print miscUtils.fixedLengthString(title, "alpha: " + str(alpha))
-print miscUtils.fixedLengthString(title, "Q: " + str(Q))
-print miscUtils.fixedLengthString(title, "R: " + str(R))
-print miscUtils.fixedLengthString(title, "L: " + str(L))
-print miscUtils.fixedLengthString(title, "sub: " + str(sub))
-print miscUtils.fixedLengthString(title, "sparseThreshold: " + str(sparseThreshold))
-print miscUtils.fixedLengthString(title, "SCIThreshold: " + str(SCIThreshold)) + "\n"
-print "Tiempo de entrenamiento promedio: ", trainTimeAcumulado/cantIteraciones, " segundos"
-print "Tiempo de testing promedio: ", testTimeAcumulado/cantIteraciones, " segundos/persona"
-
-print "Porcentaje acumulado: ", porcAcumulado/cantIteraciones, "%\n"
-
-
-print "Tiempo total del test: ", (testTimeAcumulado*cantPersonas + trainTimeAcumulado)/60, " minutos"
+header = miscUtils.testResultsHeader(dataBase, useAlpha, cantPersonas, cantPhotosDict, cantIteraciones)	
+results = miscUtils.testResults(cantPersonas, m, m2, height, width, a, b, alpha, Q, R, L, sub, sparseThreshold, SCIThreshold, trainTimeAcumulado, testTimeAcumulado, porcAcumulado, cantIteraciones)
+print header
+print results

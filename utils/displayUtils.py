@@ -6,8 +6,8 @@ Tomás Larrain A.
 """
 
 import numpy as np
-import utils.ASRUtils as asr
-import utils.miscUtils as miscUtils
+import ASRUtils as asr
+import miscUtils as miscUtils
 import cv2
 import os
 
@@ -51,12 +51,12 @@ def generateAllPhotos(cantPersonas, cantPhotosDict, idxPhoto, idxPerson, rootPat
 
 		for d in range(cantPhotosDict):
 			routePhoto = os.path.join(route, photos[idxPhoto[i,d]]) # ruta de la foto j
-			I = miscUtils.readScaleImageColor(routePhoto, dispWidth, dispHeight) # lectura de la imagen
+			I = imageUtils.readScaleImage(routePhoto, dispWidth, dispHeight,tipo='color') # lectura de la imagen
 			fila = miscUtils.concatenate(I, fila, 'horizontal')
 
 		fila = miscUtils.concatenate(blackSpace, fila, 'horizontal')
 		routePhoto = os.path.join(route, photos[idxPhoto[i,cantPhotosDict]]) # ruta de la foto de test
-		I = miscUtils.readScaleImageColor(routePhoto, dispWidth, dispHeight) # lectura de la imagen de test
+		I = imageUtils.readScaleImage(routePhoto, dispWidth, dispHeight,tipo='color') # lectura de la imagen de test
 		fila = miscUtils.concatenate(I, fila, 'horizontal')		
 		displayImage = miscUtils.concatenate(fila, displayImage, 'vertical')
 
@@ -107,8 +107,8 @@ def generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, id
 		matchPhotos = os.listdir(matchRoute)
 		matchRoutePhoto = os.path.join(matchRoute, matchPhotos[matchPhoto])
 
-		Iq = miscUtils.readScaleImageColor(queryRoutePhoto, dispWidth, dispHeight)
-		Im = miscUtils.readScaleImageColor(matchRoutePhoto, dispWidth, dispHeight)
+		Iq = imageUtils.readScaleImage(queryRoutePhoto, dispWidth, dispHeight, tipo='color')
+		Im = imageUtils.readScaleImage(matchRoutePhoto, dispWidth, dispHeight, tipo='color')
 
 		if correctPhoto[i,1] == 0:
 			Im = drawPatch(Im, (0,0), dispWidth, dispHeight, 0, 0, 255)

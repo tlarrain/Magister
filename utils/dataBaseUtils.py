@@ -7,12 +7,12 @@ Tomás Larrain A.
 import cv2
 import os
 import numpy as np
-import utils.miscUtils as miscUtils
+import miscUtils
 
 def getFacePath():
 	# Path donde estan todas las bases de datos
-	return '/Users/Tomas/Developer/data/faces/'
-
+	# return '/Users/Tomas/Developer/data/faces/'
+	return '/Users/tlarrain/Developer/data/faces/'
 
 def getDataBasePath(dataBase):
 	# Retorna el path donde se encuentra la base de datos dataBase
@@ -36,6 +36,9 @@ def getDataBasePath(dataBase):
 
 	if dataBase == 'Yale':
 		return os.path.join(facePath, "Yale"), 59
+
+	if dataBase == 'YaleTanTriggs':
+		return os.path.join(facePath, "YaleTanTriggs"), 59
 
 	if dataBase == 'FWM':
 		return os.path.join(facePath, "FWM"), 0

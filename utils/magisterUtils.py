@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import spams
 import miscUtils
+import imageUtils
 import ASRUtils as asr
 from scipy import signal
 from scipy.spatial import distance as dist
@@ -79,7 +80,7 @@ def generateQueryBase(dataBasePath, idxPerson, idxPhoto, cantPhotosSparse, U, YC
 			# idx = j+cantPhotosDict
 			idx = j
 			routePhoto = os.path.join(route, photos[idxPhoto[i,idx]])
-			I = miscUtils.readScaleImageBW(routePhoto, width, height)
+			I = imageUtils.readScaleImage(routePhoto, width, height)
 			
 			alpha1 = fingerprint(I, U, YC, iiSparse, jjSparse, L, a, b, alpha, sub, useAlpha)
 			Ysparse = miscUtils.concatenate(alpha1, Ysparse, 'horizontal')
@@ -164,7 +165,7 @@ def testing(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Ysparse, ii
 		photos = os.listdir(route)
 		routePhoto = os.path.join(route, photos[idxPhoto[i,idxTestPhoto]])
 		
-		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
+		I = imageUtils.readScaleImage(routePhoto, width, height) # lectura de la imagne
 		alpha1 = fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha)
 		
 		# Inicialización variables de testing
@@ -202,7 +203,7 @@ def testing_v2(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m,
 		photos = os.listdir(route)
 		routePhoto = os.path.join(route, photos[idxPhoto[i,idxTestPhoto]])
 		
-		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
+		I = imageUtils.readScaleImage(routePhoto, width, height) # lectura de la imagne
 		alpha1 = fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha)
 		ganador = clasifier_v2(alpha1, Q, R, m, sparseThreshold, cantPersonas)
 
@@ -219,7 +220,7 @@ def testing_v2(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m,
 
 
 def testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m, ii, jj, L, a, b, alpha, sub, 
-	sparseThreshold, SCIThreshold, useAlpha):
+	sparseThreshold, SCIThreshold, useAlpha, tanTriggs):
 	# testing kNNSparse_v1.1
 	aciertos = 0
 	cantPersonas = len(idxPerson)
@@ -231,8 +232,8 @@ def testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m,
 		photos = os.listdir(route)
 		routePhoto = os.path.join(route, photos[idxPhoto[i,idxTestPhoto]])
 		
-		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
-		alpha1 = fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha)
+		I = imageUtils.readScaleImage(routePhoto, width, height, tanTriggs=tanTriggs) # lectura de la imagne
+		alpha1 = fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha=useAlpha)
 		
 		# Ytest = miscUtils.concatenate(alpha1,Ytest,'horizontal')
 		alpha1 = alpha1.transpose()
@@ -261,7 +262,7 @@ def testing_Scikit(dataBasePath, idxPerson, idxPhoto, n_neighbors, width, height
 		photos = os.listdir(route)
 		routePhoto = os.path.join(route, photos[idxPhoto[i,idxTestPhoto]])
 		
-		I = miscUtils.readScaleImageBW(routePhoto, width, height) # lectura de la imagne
+		I = imageUtils.readScaleImage(routePhoto, width, height) # lectura de la imagne
 		alpha1 = fingerprint(I, U, YC, ii, jj, L, a, b, alpha, sub, useAlpha)
 		
 		alpha1 = alpha1.transpose()
