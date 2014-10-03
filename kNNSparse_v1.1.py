@@ -25,13 +25,18 @@ a = 18					# Alto del patch
 b = 18					# Ancho del patch
 alpha = 0.5	 			# Peso del centro
 Q = 20					# Cluster Padres
-R = 10					# Cluser Hijos
+R = 20					# Cluser Hijos
 L = 6					# Cantidad de elementos en repr. sparse
 sub = 1					# Subsample
 sparseThreshold = 0 	# Umbral para binarizar la representación sparse
+<<<<<<< HEAD
 SCIThreshold = 0.2		# Umbral de seleccion de patches
+=======
+SCIThreshold = 0		# Umbral de seleccion de patches
+>>>>>>> FETCH_HEAD
 useAlpha = True			# Usar alpha en el vector de cada patch
 tanTriggs = False		# Utilizar normalizacion de Tan-Triggs
+
 
 
 # Variables de display
@@ -47,15 +52,23 @@ trainTimeAcumulado = 0
 
 
 # Datos de entrada del dataset
+<<<<<<< HEAD
 dataBase = "Yale"
+=======
+dataBase = "AR"
+>>>>>>> FETCH_HEAD
 dataBasePath, cantPhotosPerPerson = dataBaseUtils.getDataBasePath(dataBase)
 
 # Datos de entrada del Test
 cantIteraciones = 100
+<<<<<<< HEAD
 cantPersonas = 20		# Cantidad de personas para el experimento
+=======
+cantPersonas = 40 		# Cantidad de personas para el experimento
+>>>>>>> FETCH_HEAD
 
 
-cantPhotosDict = 4
+cantPhotosDict = 9
 cantPhotos = cantPhotosDict+1
 
 idxTestPhoto = cantPhotosDict 
