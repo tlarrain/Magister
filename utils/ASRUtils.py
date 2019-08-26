@@ -14,19 +14,19 @@ from sklearn.neighbors import KNeighborsClassifier
 from scipy import io
 import os
 
-def LUT(h, w, a, b):
-	# Genera una Look Up Table para extraer parches de axb de una imagen de hxw
-	U = np.zeros(((h-a+1)*(w-b+1),a*b))
-	I =np.zeros((h,w))
+def LUT(height, width, w):
+	# Genera una Look Up Table para extraer parches de wxw de una imagen de heightxwidth
+	U = np.zeros(((height-w+1)*(width-w+1),w*w))
+	I =np.zeros((height,width))
 	count = 0
-	for i in range(h):
-		for j in range(w):
+	for i in range(height):
+		for j in range(width):
 			I[i,j] = count
 			count+=1
 	count = 0		
-	for i in range(h-a+1):
-		for j in range(w-b+1):
-			fila = I[i:i+a,j:j+b].transpose().flatten()
+	for i in range(height-w+1):
+		for j in range(width-w+1):
+			fila = I[i:i+w,j:j+w].transpose().flatten()
 			U[count,:] = fila
 			count+=1	
 	return U			
@@ -39,19 +39,19 @@ def uninorm(Y):
 	return Y
 
 
-def randomCorners(h, w, a, b, m):
+def randomCorners(height, width, w, m):
 	# esquinas aleatorias	
-	ii = np.random.random_integers(0,h-a,size=m)
-	jj = np.random.random_integers(0,w-b,size=m)
+	ii = np.random.random_integers(0,height-w,size=m)
+	jj = np.random.random_integers(0,width-w,size=m)
 
 	return ii, jj
 
 
-def patches(I, ii, jj, U, a, b, alpha, sub,useAlpha=True):
+def patches(I, ii, jj, U, w, alpha, sub,useAlpha=True):
 	# Extrae todos los patches cuya esquina superior izquierda es (ii,jj)
 	ii = ii.astype(int)
 	jj = jj.astype(int)
-	h = I.shape[1]-b+1
+	h = I.shape[1]-w+1
 	kk = ii*h+jj
 	Iv = np.reshape(I,I.shape[0]*I.shape[1])
 	n = len(kk)
@@ -63,26 +63,26 @@ def patches(I, ii, jj, U, a, b, alpha, sub,useAlpha=True):
 	if useAlpha:	
 		ixo = np.array([ii+1,jj+1]).transpose()
 		ixi = ixo.copy()
-		centro = ixo +np.array([a/2,b/2]) 
-		ixo = (ixo +np.array([a/2,b/2]))*alpha
+		centro = ixo +np.array([w/2,w/2]) 
+		ixo = (ixo +np.array([w/2,w/2]))*alpha
 		Yaux = np.hstack((Yaux,ixo))
 
 	Y = uninorm(Yaux)
 	return Y
 
 
-def grilla(h, w, a, b, m):
+def grilla(height, width, w, m):
 	# Genera indices para extraer parches en forma de grilla (distribucion uniforme)
 
 	ii = np.zeros(m)
 	jj = np.zeros(m)
 	divisor = int(np.floor(m ** (0.5)))
 	auxIdx = 0
-	pasoI = max(1,(h-a)/divisor)
-	pasoJ = max(1,(w-b)/divisor)
+	pasoI = max(1,(height-w)/divisor)
+	pasoJ = max(1,(width-w)/divisor)
 	print pasoI, pasoJ
-	for i in range(0,h-a+1,pasoI):
-		for j in range(0,w-b+1,pasoJ):
+	for i in range(0,height-w+1,pasoI):
+		for j in range(0,width-w+1,pasoJ):
 			ii[auxIdx] = i
 			jj[auxIdx] = j
 			auxIdx += 1
@@ -92,15 +92,15 @@ def grilla(h, w, a, b, m):
 			break
 	return ii,jj		
 
-def grilla_v2(h, w, a, b, m):
+def grilla_v2(height, width, w, m):
 	# Pensada para usar m como cuadrado perfecto (tiene sentido si las fotos que se usan son cuadradas)
 
 	ii = np.zeros(m)
 	jj = np.zeros(m)
 	cantidadPorEje = int(np.floor(m ** (0.5)))
 	
-	ejeI = np.floor(np.linspace(0,h-a,cantidadPorEje))
-	ejeJ = np.floor(np.linspace(0,w-b,cantidadPorEje))
+	ejeI = np.floor(np.linspace(0,height-w,cantidadPorEje))
+	ejeJ = np.floor(np.linspace(0,width-w,cantidadPorEje))
 	auxIdx = 0
 	
 	for i in ejeI:
@@ -109,10 +109,10 @@ def grilla_v2(h, w, a, b, m):
 			jj[auxIdx] = j
 			auxIdx += 1
 			
-	return ii,jj	
+	return ii[:cantidadPorEje**2],jj[:cantidadPorEje**2]	
 
 
-def generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict, tanTriggs):
+def generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, w, alpha, sub, useAlpha, cantPhotosDict, tanTriggs):
 	# Genera diccionario con parches de fotos
 	cantPersonas = len(idxPerson)
 	YC = np.array([])
@@ -130,12 +130,13 @@ def generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, 
 			routePhoto = os.path.join(route, photos[idxPhoto[i,j]]) # ruta de la foto j
 			I = imageUtils.readScaleImage(routePhoto, width, height, tanTriggs=tanTriggs) # lectura de la imagen
 					
-			Yaux = patches(I, iiDict, jjDict, U, a, b, alpha, sub, useAlpha) # extracción de parches
+			Yaux = patches(I, iiDict, jjDict, U, w, alpha, sub, useAlpha) # extracción de parches
 		
 			# Concatenación de matrices Yaux
 			Y = miscUtils.concatenate(Yaux, Y, 'vertical')
 
-			YCaux,YPaux = modelling(Y, Q, R) # Clusteriza la matriz Y en padres e hijos
+		
+		YCaux,YPaux = modelling(Y, Q, R) # Clusteriza la matriz Y en padres e hijos
 			
 		# Concatenación de matrices YC e YP
 		YC = miscUtils.concatenate(YCaux, YC, 'vertical')
@@ -172,10 +173,66 @@ def adaptiveDictionary_v3(Y, YC, Q, R, theta):
 		seleccion[d,:] = sujSel
 		
 		
-	LimMat = LimMat.astype(int)		
-	seleccion = np.array(seleccion)
+	LimMat = LimMat.astype(int).transpose()		
+	seleccion = np.array(seleccion).transpose()
 	return LimMat, seleccion
 
+
+def adaptiveDictionary_v3(Y, YC, Q, R, theta):
+	cantPersonas = YC.shape[0]/(Q*R)
+	m = Y.shape[0]
+	seleccion = np.zeros((cantPersonas,m))
+	LimMat = np.zeros((R*cantPersonas,m))
+	
+
+	cos = np.dot(YC,Y.transpose())
+
+	for d in range(cantPersonas):
+		cos1 = cos[d*Q*R:(d+1)*Q*R,:]
+		minimo = 1-np.amax(cos1,axis=0)
+
+		lim_inf = d*Q*R+(np.argmax(cos1,axis=0)/R)*R
+		lim_sup = lim_inf + R
+		
+		sujSel = minimo < theta
+		minSel = np.where(minimo < theta)[0]
+		
+		for k in range(m):
+			if sujSel[k]:
+				LimMat[d*R:(d+1)*R,k] = np.array(range(lim_inf[k],lim_sup[k]))
+		
+		seleccion[d,:] = sujSel
+		
+		
+	LimMat = LimMat.astype(int).transpose()		
+	seleccion = np.array(seleccion).transpose()
+	return LimMat, seleccion
+
+
+def adaptiveDictionary_v4(Y, YC, Q, R):
+	# Version para magister
+	cantPersonas = YC.shape[0]/(Q*R)
+	m = Y.shape[0]
+	seleccion = np.zeros((cantPersonas,m))
+	LimMat = np.zeros((R*cantPersonas,m))
+	
+
+	cos = np.dot(YC,Y.transpose())
+
+	for d in range(cantPersonas):
+		cos1 = cos[d*Q*R:(d+1)*Q*R,:]
+		minimo = 1-np.amax(cos1,axis=0)
+
+		lim_inf = d*Q*R+(np.argmax(cos1,axis=0)/R)*R
+		lim_sup = lim_inf + R
+		
+		for k in range(m):
+			LimMat[d*R:(d+1)*R,k] = np.array(range(lim_inf[k],lim_sup[k]))
+		
+		
+	LimMat = LimMat.astype(int).transpose()		
+	
+	return LimMat	
 
 def adaptiveDictionary_v2(patch, YC, Q, R, theta):
 	# Encuentra el diccionario adaptivo basado en theta 
@@ -240,18 +297,20 @@ def normL1_lasso(x, A, R):
 
 def normL1_omp(x, A, R):
 	# minimizacion L1-OMP
-	x = np.float64(x)
-	A = np.float64(A)
+	# x = np.float64(x)
+	# A = np.float64(A)
 
-	X = np.asfortranarray(np.matrix(x).transpose())
-	D = np.asfortranarray(A.transpose())
+	X = np.asfortranarray(np.matrix(x).transpose(), dtype = 'f8')
+	D = np.asfortranarray(np.matrix(A).transpose(), dtype = 'f8')
 	
 	numThreads = -1
 	eps = 0.0
 	alpha = spams.omp(X, D = D, L = R, eps = eps, return_reg_path = False, numThreads = numThreads)
+	#alpha = spams.omp(X, D, L = R)
 	alpha = np.array(alpha.todense())
 
 	return alpha
+
 
 
 def sortAndSelect(registro, tau, s, cantPersonas, display=False):
@@ -307,13 +366,15 @@ def SCI(alpha, Q, R, cantSujetos, L):
 
 	for i in range(cantSujetos): 
 		alphaClass = alpha[i*Q*R:(i+1)*Q*R]
-		auxSum = alphaClass != 0
-		auxSum = auxSum.sum()
-
+		auxSum = cv2.norm(alphaClass,cv2.NORM_L1)
+		
 		if auxSum > maxSum:
 			maxSum = auxSum
-	    
+	
+	     
 	SCI = (float(maxSum)/L*cantSujetos - 1)/(cantSujetos-1)
+	
+	
 	return SCI
 
 

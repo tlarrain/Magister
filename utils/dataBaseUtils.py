@@ -9,10 +9,11 @@ import os
 import numpy as np
 import miscUtils
 
+
 def getFacePath():
 	# Path donde estan todas las bases de datos
-	# return '/Users/Tomas/Developer/data/faces/'
-	return '/Users/tlarrain/Developer/data/faces/'
+	return '/Users/Tomas/Developer/data/faces/'
+	# return '/Users/tlarrain/Developer/data/faces/'
 
 def getDataBasePath(dataBase):
 	# Retorna el path donde se encuentra la base de datos dataBase
@@ -43,9 +44,16 @@ def getDataBasePath(dataBase):
 	if dataBase == 'FWM':
 		return os.path.join(facePath, "FWM"), 0
 
+	if dataBase == 'MPIE':
+		return os.path.join(facePath, "MPIE"), 0
+
 	else:
 		return "No data base with " + str(dataBase) + " name in the face path"
 
+def getTestPath():
+	# path donde estan guardados los txt de las pruebas
+	facePath = getFacePath()
+	return os.path.join(facePath, 'pruebas')
 
 def getPersonIDs(dataBasePath):
 	# Retorna el ID de las personas del dataBasePath
@@ -116,7 +124,7 @@ def randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas):
 	idxPhoto = np.array([])
 
 	for i in range(len(idxPerson)):
-		photos = totalPhotos(dataBasePath, idxPerson[i])
+		photos = len(totalPhotos(dataBasePath, idxPerson[i]))
 		idxPhoto = miscUtils.concatenate(np.random.permutation(photos)[:cantPhotos],idxPhoto,'vertical')
 	
 	return idxPerson, idxPhoto
@@ -124,7 +132,7 @@ def randomSelection(dataBasePath, idxPerson, cantPhotos, cantPersonas):
 def totalPhotos(dataBasePath, idxSinglePerson):
 	# Cantidad de fotos de una sola persona 
 	personPath = os.path.join(dataBasePath, idxSinglePerson)
-	totalPhotos = len(os.listdir(personPath))
+	totalPhotos = os.listdir(personPath)
 	
 	return totalPhotos
 

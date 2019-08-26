@@ -18,7 +18,7 @@ def readScaleImage(route, width, height, tanTriggs=False, tipo='bw'):
 
 	if It is not None:
 		
-		if tipo == 'bw':
+		if tipo == 'bw' and len(It.shape) > 2:
 			It = cv2.cvtColor(It,cv2.COLOR_BGR2GRAY)
 		
 		It = np.float32(It)

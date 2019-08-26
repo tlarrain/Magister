@@ -19,18 +19,18 @@ import cv2
 # Parámetros
 m = 400					# Cantidad de patches seleccionados por foto para A
 m2 = 400				# Cantidad de patches para Matriz S
+s = 400 				# Cantidad de parches para la votacion
 height = 100			# Alto del resize de la imagen
 width = 100				# Ancho del resize de la imagen
 a = 18					# Alto del patch
 b = 18					# Ancho del patch
 alpha = 0.5	 			# Peso del centro
 Q = 20					# Cluster Padres
-R = 20					# Cluser Hijos
+R = 10					# Cluser Hijos
 L = 6					# Cantidad de elementos en repr. sparse
 sub = 1					# Subsample
 sparseThreshold = 0 	# Umbral para binarizar la representación sparse
-SCIThreshold = 0.2		# Umbral de seleccion de patches
-SCIThreshold = 0		# Umbral de seleccion de patches
+SCIThreshold = 0.05		# Umbral de seleccion de patches
 useAlpha = True			# Usar alpha en el vector de cada patch
 tanTriggs = False		# Utilizar normalizacion de Tan-Triggs
 
@@ -49,16 +49,16 @@ trainTimeAcumulado = 0
 
 
 # Datos de entrada del dataset
-dataBase = "Yale"
+dataBase = "AR"
 
 dataBasePath, cantPhotosPerPerson = dataBaseUtils.getDataBasePath(dataBase)
 
 # Datos de entrada del Test
-cantIteraciones = 100
+cantIteraciones = 1
 cantPersonas = 20		# Cantidad de personas para el experimento
 
 
-cantPhotosDict = 9
+cantPhotosDict = 4
 cantPhotos = cantPhotosDict+1
 
 idxTestPhoto = cantPhotosDict 
@@ -91,17 +91,18 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	if dataBase == "ARx":
 		idxPhoto = dataBaseUtils.randomSelectionPhoto_ARx(cantPhotos, cantPersonas)	
 
-
+	idxPerson = np.load('idxPerson.npy')
+	idxPhoto = np.load('idxPhoto.npy')
+	
 	##################################
 	######### ENTRENAMIENTO ##########
 	##################################
 
 	beginTime = time.time()
+
 	######### CREACION DICCIONARIO ##########
 	YC = asr.generateDictionary(dataBasePath, idxPerson, idxPhoto, iiDict, jjDict, Q, R, U, width, height, a, b, alpha, sub, useAlpha, cantPhotosDict, tanTriggs)
 	
-
-	# Inicialización variables de control
 	trainTime = time.time() - beginTime
 	trainTimeAcumulado += trainTime
 	
@@ -113,10 +114,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	print "Testing..."
 	beginTime = time.time()
 	
-	# aciertos = magisterUtils.testing_v2(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, iiSparse, jjSparse, L, a, b, 
-	# 	alpha, sub, sparseThreshold, useAlpha)
-
-	aciertos = magisterUtils.testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, iiSparse, jjSparse, L, a, b, 
+	aciertos = magisterUtils.testing_v3(dataBasePath, idxPerson, idxPhoto, width, height, U, YC, Q, R, m2, s, iiSparse, jjSparse, L, a, b, 
 		alpha, sub, sparseThreshold, SCIThreshold, useAlpha, tanTriggs)
 	
 
@@ -130,6 +128,8 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 	porcAcumulado += float(aciertos)/cantPersonas*100
 	print "Porcentaje Acumlado: ", float(porcAcumulado)/(it+1), "%\n"	
 
+	#np.save('idxPerson.npy', idxPerson)
+	#np.save('idxPhoto.npy', idxPhoto)
 	if display:
 		# results = displayUtils.generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, 
 		# 	dataBasePath, dispWidth, dispHeight)
@@ -144,7 +144,7 @@ for it in range(cantIteraciones): # repite el experimento cantIteraciones veces
 
 
 
-header = miscUtils.testResultsHeader(dataBase, useAlpha, cantPersonas, cantPhotosDict, cantIteraciones)	
+header = miscUtils.testResultsHeader(dataBase, useAlpha, tanTriggs, cantPersonas, cantPhotosDict, cantIteraciones)	
 results = miscUtils.testResults(cantPersonas, m, m2, height, width, a, b, alpha, Q, R, L, sub, sparseThreshold, SCIThreshold, trainTimeAcumulado, testTimeAcumulado, porcAcumulado, cantIteraciones)
 print header
 print results

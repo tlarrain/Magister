@@ -11,26 +11,24 @@ import shutil
 import os
 
 
-
-# root = "/Users/Tomas/Dropbox/Camera Uploads"
-# dst = "/Users/Tomas/Developer/data/faces/FWM"
+root = "/Users/tlarrain/Developer/data/faces/MPIE_old"
+dst = "/Users/tlarrain/Developer/data/faces/MPIE"
 
 if not os.path.exists(dst):
     os.makedirs(dst)
 
 photoNames = os.listdir(root)
 
-photoEx = photoNames[1]
-photo = photoEx.split('_')
+
 
 for i in range(1,len(photoNames)):
-# 	photo = photoNames[i]
-# 	actPersonID = photo.split('_')[1]
-# 	directory = os.path.join(dst,actPersonID)
-# 	print directory
-# 	if not os.path.exists(directory): # crea la carpeta del ID de la persona si no existía anteriormente
-# 		os.makedirs(directory)
+	photo = photoNames[i]
+	actPersonID = photo.split('_')[1]
+	directory = os.path.join(dst,actPersonID)
+	
+	if not os.path.exists(directory): # crea la carpeta del ID de la persona si no existía anteriormente
+		os.makedirs(directory)
 
-# 	rootFile = os.path.join(root, photo)
-# 	dstFile = os.path.join(directory, photo)
-# 	shutil.copy(rootFile, dstFile)	
+	rootFile = os.path.join(root, photo)
+	dstFile = os.path.join(directory, photo)
+	shutil.copy(rootFile, dstFile)	

@@ -7,7 +7,8 @@ Tomás Larrain A.
 
 import numpy as np
 import ASRUtils as asr
-import miscUtils as miscUtils
+import miscUtils
+import imageUtils
 import cv2
 import os
 
@@ -39,7 +40,7 @@ def displayGrilla(I,ii,jj,a,b,m):
 
 
 
-def generateAllPhotos(cantPersonas, cantPhotosDict, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):
+def generateAllPhotos(cantPersonas, cantPhotosDict, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight, aciertos):
 
 	displayImage = np.array([])
 	blackSpace = np.zeros((dispHeight,20,3)) # espacio para separar fotos del diccionario de base de datos
@@ -57,6 +58,13 @@ def generateAllPhotos(cantPersonas, cantPhotosDict, idxPhoto, idxPerson, rootPat
 		fila = miscUtils.concatenate(blackSpace, fila, 'horizontal')
 		routePhoto = os.path.join(route, photos[idxPhoto[i,cantPhotosDict]]) # ruta de la foto de test
 		I = imageUtils.readScaleImage(routePhoto, dispWidth, dispHeight,tipo='color') # lectura de la imagen de test
+		
+		if aciertos[i] == 0:
+			I = drawPatch(I, (0,0), dispWidth, dispHeight, 0, 0, 255)
+
+		else: 
+			I = drawPatch(I, (0,0), dispWidth, dispHeight, 0, 255, 0)
+
 		fila = miscUtils.concatenate(I, fila, 'horizontal')		
 		displayImage = miscUtils.concatenate(fila, displayImage, 'vertical')
 
@@ -77,8 +85,6 @@ def displayResults(results, allPhotos):
 
 
 #######################################
-
-
 
 
 def generateResults(correctPhoto, cantPhotosDict, cantPhotosSparse, idxPhoto, idxPerson, rootPath, dispWidth, dispHeight):	
